@@ -675,6 +675,10 @@ p {
   opacity: 0.62;
 }
 
+.toolbarLive .themeToggle {
+  margin-right: 28px;
+}
+
 .toolbar .toolbarMenuTrigger {
   display: inline-flex;
   place-items: initial;

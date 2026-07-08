@@ -277,7 +277,7 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
   const displayedSource = data?.source || source || "...";
 
   return (
-    <header className="toolbar">
+    <header className={`toolbar ${view === "live" ? "toolbarLive" : "toolbarHistory"}`}>
       <div>
         <div className="titleLine">
           <h2>{view === "live" ? "Live attacks" : "History"}</h2>
@@ -379,6 +379,7 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
         </button>
         <button
           type="button"
+          className="themeToggle"
           onClick={() => setTheme((value) => value === "dark" ? "light" : "dark")}
           title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
