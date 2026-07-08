@@ -2,6 +2,7 @@
   "name": "crowdsec-map",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm:dev:client\" \"npm:dev:server\"",

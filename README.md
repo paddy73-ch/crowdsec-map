@@ -139,3 +139,7 @@ http://localhost:8088/api/attacks
 - If CrowdSec does not provide coordinates, the app tries to resolve locations with `geoip-lite`.
 - If `DATA_SOURCE=auto` cannot reach a real source, the app falls back to sample data and shows a warning in the timeline.
 - Using `cscli` from a separate container requires Docker socket access. Use LAPI if you want to avoid mounting the Docker socket.
+
+## License
+
+CrowdSec Map is released under the GNU Affero General Public License v3.0 only. See [LICENSE](LICENSE).
