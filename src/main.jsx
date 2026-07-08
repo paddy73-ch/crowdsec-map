@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, BarChart3, ChevronDown, ChevronUp, Crosshair, Globe2, Map as MapIcon, Moon, RefreshCcw, ShieldAlert, Sun, Timer } from "lucide-react";
+import { Activity, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Globe2, Map as MapIcon, Moon, RefreshCcw, ShieldAlert, Sun, Timer, X } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -392,6 +392,7 @@ function HistoryView() {
   const [days, setDays] = useState(30);
   const [groupBy, setGroupBy] = useState("cidr24");
   const [history, setHistory] = useState(null);
+  const [selectedIp, setSelectedIp] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -478,8 +479,18 @@ function HistoryView() {
               </tr>
             </thead>
             <tbody>
-              {history.items.map((item) => (
-                <tr key={item.label}>
+              {history.items.map((item) => {
+                const isIpRow = groupBy === "ip" && isIpv4(item.label);
+                return (
+                <tr
+                  className={isIpRow ? "clickableRow" : ""}
+                  key={item.label}
+                  onClick={() => {
+                    if (isIpRow) {
+                      setSelectedIp(item.label);
+                    }
+                  }}
+                >
                   <td>
                     <strong title={item.label}>{item.label}</strong>
                     <div className="historyBar"><i style={{ width: `${Math.max(4, (item.alerts / maxAlerts) * 100)}%` }} /></div>
@@ -491,12 +502,152 @@ function HistoryView() {
                   <td title={item.topScenario}>{item.topScenario}</td>
                   <td>{item.topCountry}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
+      {selectedIp && (
+        <IpDetailModal
+          days={days}
+          ip={selectedIp}
+          onClose={() => setSelectedIp("")}
+        />
+      )}
     </section>
+  );
+}
+
+function IpDetailModal({ ip, days, onClose }) {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const loadDetail = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ days: String(days) });
+      const response = await fetch(`/api/history/ip/${encodeURIComponent(ip)}?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      setDetail(await response.json());
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [days, ip]);
+
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const copyRaw = async () => {
+    try {
+      await navigator.clipboard.writeText(detail?.cscli || "");
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="modalBackdrop" role="presentation" onClick={onClose}>
+      <section className="ipModal" role="dialog" aria-modal="true" aria-labelledby="ip-detail-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modalHeader">
+          <div>
+            <h3 id="ip-detail-title">{ip}</h3>
+            <p>{days}d history window · CrowdSec raw details</p>
+          </div>
+          <button type="button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </header>
+
+        {error && <div className="warning">{error}</div>}
+        {loading && <div className="modalLoading">Loading IP details...</div>}
+        {!loading && detail && (
+          <>
+            <div className="ipSummaryGrid">
+              <Metric icon={<Activity />} label="Alerts" value={detail.alerts || 0} />
+              <Metric icon={<BarChart3 />} label="Events" value={detail.events || 0} />
+              <Metric icon={<Timer />} label="Days seen" value={`${detail.daysSeen || 0}/${detail.days}`} />
+            </div>
+
+            <div className="ipMetaGrid">
+              <div>
+                <span>ASN</span>
+                <strong title={detail.topAsName}>{detail.topAsName}</strong>
+              </div>
+              <div>
+                <span>Top scenario</span>
+                <strong title={detail.topScenario}>{detail.topScenario}</strong>
+              </div>
+              <div>
+                <span>Country</span>
+                <strong>{detail.topCountry}</strong>
+              </div>
+              <div>
+                <span>Last seen</span>
+                <strong title={detail.lastSeen}>{formatRelativeTime(detail.lastSeen)}</strong>
+              </div>
+            </div>
+
+            <div className="recentEvents">
+              <h4>Recent history events</h4>
+              {detail.recentEvents.length === 0 ? (
+                <p>No events in the selected history window.</p>
+              ) : (
+                <div className="eventList">
+                  {detail.recentEvents.slice(0, 10).map((event) => (
+                    <div className="eventRow" key={`${event.seenAt}-${event.scenario}-${event.count}`}>
+                      <time>{formatRelativeTime(event.seenAt)}</time>
+                      <strong>{event.count}</strong>
+                      <span title={event.scenario}>{event.scenario}</span>
+                      <em>{event.country}</em>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rawBlock">
+              <div className="rawHeader">
+                <div>
+                  <h4>cscli raw details</h4>
+                  <p>{detail.note}</p>
+                </div>
+                <div className="rawActions">
+                  <button type="button" onClick={loadDetail} disabled={loading} title="Refresh IP details">
+                    <RefreshCcw size={15} className={loading ? "spin" : ""} />
+                  </button>
+                  <button type="button" onClick={copyRaw} disabled={!detail.cscli} title="Copy raw output">
+                    <Copy size={15} /> {copied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </div>
+              {detail.cscliWarning && <div className="warning">cscli: {detail.cscliWarning}</div>}
+              <pre>{detail.cscli || "No cscli output for this IP."}</pre>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -883,6 +1034,11 @@ function formatRelativeTime(value) {
     return `${diffHours}h ago`;
   }
   return `${Math.round(diffHours / 24)}d ago`;
+}
+
+function isIpv4(value) {
+  const parts = String(value || "").split(".");
+  return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
 }
 
 createRoot(document.getElementById("root")).render(<App />);

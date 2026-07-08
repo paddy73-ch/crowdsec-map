@@ -106,6 +106,76 @@ export async function readHistorySummary(options = {}) {
   };
 }
 
+export async function readIpHistory(ip, options = {}) {
+  if (!isIpAddress(ip)) {
+    throw new Error("Invalid IP address");
+  }
+
+  const days = clampNumber(options.days, 7, 1, MAX_HISTORY_DAYS);
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const scenarioCounts = new Map();
+  const countryCounts = new Map();
+  const asNameCounts = new Map();
+  const events = [];
+  const seenDays = new Set();
+  let alerts = 0;
+  let firstSeen = "";
+  let lastSeen = "";
+
+  await forEachHistoryEntry((entry) => {
+    if (entry.ip !== ip) {
+      return;
+    }
+
+    const seenAt = new Date(entry.seenAt).getTime();
+    if (!Number.isFinite(seenAt) || seenAt < since) {
+      return;
+    }
+
+    const count = Number(entry.count || 1);
+    alerts += count;
+    seenDays.add(entry.seenAt.slice(0, 10));
+    scenarioCounts.set(entry.scenario || "unknown", (scenarioCounts.get(entry.scenario || "unknown") || 0) + count);
+    countryCounts.set(entry.country || "??", (countryCounts.get(entry.country || "??") || 0) + count);
+    asNameCounts.set(entry.asName || "unknown", (asNameCounts.get(entry.asName || "unknown") || 0) + count);
+
+    if (!firstSeen || seenAt < new Date(firstSeen).getTime()) {
+      firstSeen = entry.seenAt;
+    }
+    if (!lastSeen || seenAt > new Date(lastSeen).getTime()) {
+      lastSeen = entry.seenAt;
+    }
+
+    events.push({
+      seenAt: entry.seenAt,
+      scenario: entry.scenario || "unknown",
+      country: entry.country || "??",
+      asName: entry.asName || "unknown",
+      count
+    });
+  });
+
+  events.sort((a, b) => new Date(b.seenAt) - new Date(a.seenAt));
+
+  return {
+    ip,
+    days,
+    generatedAt: new Date().toISOString(),
+    alerts,
+    events: events.length,
+    daysSeen: seenDays.size,
+    firstSeen,
+    lastSeen,
+    topScenario: topCount(scenarioCounts),
+    topCountry: topCount(countryCounts),
+    topAsName: topCount(asNameCounts),
+    scenarios: toCountItems(scenarioCounts),
+    countries: toCountItems(countryCounts),
+    asNames: toCountItems(asNameCounts),
+    recentEvents: events.slice(0, 40)
+  };
+}
+
 function normalizeHistoryEntry(alert, now) {
   const ip = String(alert.ip || "").trim();
   const seenAt = new Date(alert.createdAt || now).toISOString();
@@ -249,4 +319,16 @@ function toCidr24(ip) {
 
 function topCount(counts) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "unknown";
+}
+
+function toCountItems(counts) {
+  return [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, 12);
+}
+
+export function isIpAddress(value) {
+  const parts = String(value || "").split(".");
+  return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
 }

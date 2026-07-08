@@ -2,9 +2,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { config } from "./config.js";
-import { readHistorySummary, recordHistory } from "./history.js";
+import { isIpAddress, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
 import { groupCounts } from "./normalize.js";
-import { readActiveBans, readCrowdSecData } from "./sources.js";
+import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -51,6 +51,30 @@ app.get("/api/history", async (request, response) => {
     days: request.query.days,
     groupBy: request.query.groupBy
   }));
+});
+
+app.get("/api/history/ip/:ip", async (request, response) => {
+  if (!isIpAddress(request.params.ip)) {
+    response.status(400).json({ error: "Invalid IP address" });
+    return;
+  }
+
+  const history = await readIpHistory(request.params.ip, { days: request.query.days });
+  let cscli = "";
+  let cscliWarning = "";
+
+  try {
+    cscli = await readCscliIpDetails(request.params.ip);
+  } catch (error) {
+    cscliWarning = error.message;
+  }
+
+  response.json({
+    ...history,
+    cscli,
+    cscliWarning,
+    note: "History is filtered by the selected window. CrowdSec raw details depend on CrowdSec alert retention."
+  });
 });
 
 const staticRoot = path.resolve(__dirname, "..", config.staticDir);

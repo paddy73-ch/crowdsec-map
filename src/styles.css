@@ -149,6 +149,48 @@ select {
   background: linear-gradient(180deg, rgba(255, 152, 79, 0.13), rgba(255, 255, 255, 0.78) 58%);
 }
 
+.themeLight .modalBackdrop {
+  background: rgba(205, 226, 222, 0.74);
+}
+
+.themeLight .ipModal {
+  border-color: rgba(39, 87, 82, 0.16);
+  background: rgba(238, 247, 245, 0.98);
+}
+
+.themeLight .ipMetaGrid div,
+.themeLight .recentEvents,
+.themeLight .rawBlock,
+.themeLight .modalLoading {
+  border-color: rgba(39, 87, 82, 0.14);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.themeLight .modalHeader p,
+.themeLight .rawHeader p,
+.themeLight .recentEvents p,
+.themeLight .ipMetaGrid span,
+.themeLight .eventRow time,
+.themeLight .eventRow em {
+  color: #58706c;
+}
+
+.themeLight .modalHeader button,
+.themeLight .rawActions button {
+  color: #122321;
+  border-color: rgba(39, 87, 82, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.themeLight .rawBlock pre,
+.themeLight .eventRow {
+  color: #122321;
+}
+
+.themeLight .historyTable tr.clickableRow:hover td {
+  background: rgba(104, 221, 198, 0.13);
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -945,6 +987,14 @@ p {
   white-space: nowrap;
 }
 
+.historyTable tr.clickableRow {
+  cursor: pointer;
+}
+
+.historyTable tr.clickableRow:hover td {
+  background: rgba(104, 221, 198, 0.07);
+}
+
 .historyBar {
   width: min(220px, 100%);
   height: 5px;
@@ -972,6 +1022,195 @@ p {
 .historyEmpty strong {
   color: #e8f3f1;
   font-size: 18px;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(1, 8, 10, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.ipModal {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 14px;
+  width: min(980px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid rgba(151, 181, 176, 0.18);
+  border-radius: 8px;
+  background: rgba(9, 18, 21, 0.96);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 18px 0;
+}
+
+.modalHeader h3,
+.rawBlock h4,
+.recentEvents h4 {
+  margin: 0;
+}
+
+.modalHeader h3 {
+  font-size: 22px;
+}
+
+.modalHeader p,
+.rawHeader p,
+.recentEvents p,
+.ipMetaGrid span {
+  margin: 4px 0 0;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.modalHeader button,
+.rawActions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  color: #e8f3f1;
+  background: #102025;
+  cursor: pointer;
+}
+
+.modalHeader button {
+  width: 38px;
+}
+
+.modalLoading {
+  margin: 0 18px;
+  padding: 18px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  color: #8da39f;
+  background: rgba(14, 28, 32, 0.82);
+}
+
+.ipSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.ipMetaGrid {
+  display: grid;
+  grid-template-columns: 1.3fr 1.3fr 0.6fr 0.8fr;
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.ipMetaGrid div,
+.recentEvents,
+.rawBlock {
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.ipMetaGrid div {
+  min-width: 0;
+  padding: 11px 12px;
+}
+
+.ipMetaGrid strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recentEvents {
+  margin: 0 18px;
+  padding: 14px;
+}
+
+.eventList {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.eventRow {
+  display: grid;
+  grid-template-columns: 82px 42px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+  color: #d9e8e5;
+  font-size: 12px;
+}
+
+.eventRow time,
+.eventRow em {
+  color: #8da39f;
+  font-style: normal;
+}
+
+.eventRow span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rawBlock {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  margin: 0 18px 18px;
+  overflow: hidden;
+}
+
+.rawHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid rgba(151, 181, 176, 0.1);
+}
+
+.rawActions {
+  display: flex;
+  gap: 8px;
+}
+
+.rawActions button {
+  min-width: 38px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rawActions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.rawBlock pre {
+  min-height: 0;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  color: #d9e8e5;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
 }
 
 .spin {
@@ -1203,6 +1442,32 @@ p {
 
   .historyRefresh {
     width: 42px;
+  }
+
+  .modalBackdrop {
+    align-items: start;
+    padding: 12px;
+  }
+
+  .ipModal {
+    grid-template-rows: auto auto auto auto auto;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+  }
+
+  .ipSummaryGrid,
+  .ipMetaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rawHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eventRow {
+    grid-template-columns: 70px 34px minmax(0, 1fr) 34px;
+    gap: 8px;
   }
 
   .toolbarStatus {

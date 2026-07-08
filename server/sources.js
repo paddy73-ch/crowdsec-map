@@ -48,6 +48,15 @@ export async function readActiveBans() {
   return normalizeActiveBans(JSON.parse(stdout));
 }
 
+export async function readCscliIpDetails(ip) {
+  const command = config.crowdsecContainer
+    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "alerts", "list", "-o", "human", "--ip", ip]]
+    : ["cscli", ["alerts", "list", "-o", "human", "--ip", ip]];
+
+  const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
+  return stdout.trim();
+}
+
 async function readCscliAlerts() {
   const command = config.crowdsecContainer
     ? ["docker", ["exec", config.crowdsecContainer, "sh", "-lc", config.cscliCommand]]
