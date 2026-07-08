@@ -2,7 +2,9 @@ import geoip from "geoip-lite";
 
 export function normalizeCrowdSecPayload(payload, sourceLabel) {
   const rawItems = Array.isArray(payload) ? payload : payload?.items || payload?.alerts || payload?.decisions || [];
-  const alerts = rawItems.map((item, index) => normalizeItem(item, index)).filter(Boolean);
+  const alerts = rawItems
+    .map((item, index) => normalizeItem(item, index))
+    .filter((item) => item && !isFeedUpdate(item.scenario));
 
   return {
     source: sourceLabel,
@@ -90,4 +92,8 @@ export function groupCounts(items, field, limit = 8) {
 
 function formatScenarioName(value) {
   return String(value).replace(/^crowdsecurity\//, "");
+}
+
+function isFeedUpdate(scenario) {
+  return /^update\s*:\s*\+\d+\/-\d+\s+IPs?$/i.test(String(scenario).trim());
 }
