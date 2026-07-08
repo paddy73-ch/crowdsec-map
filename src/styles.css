@@ -26,7 +26,7 @@ select {
 
 .appShell {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 360px minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
   background:
@@ -99,7 +99,8 @@ p {
   display: grid;
   grid-template-columns: 24px 1fr;
   gap: 6px 8px;
-  padding: 13px;
+  min-width: 0;
+  padding: 12px;
 }
 
 .metric svg {
@@ -110,6 +111,13 @@ p {
   grid-column: 1 / -1;
   font-size: 28px;
   line-height: 1;
+}
+
+.metric span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel {
@@ -131,7 +139,7 @@ p {
 
 .rankSwitch {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
   gap: 2px;
   width: 100%;
@@ -147,11 +155,11 @@ p {
   height: 26px;
   border: 0;
   border-radius: 6px;
-  padding: 0 8px;
+  padding: 0 5px;
   color: #8da39f;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
 }
@@ -169,16 +177,35 @@ p {
   overflow: hidden;
 }
 
+.panelExpanded .rankList:not(.rankMeasure) {
+  overflow: auto;
+  padding-right: 3px;
+}
+
 .rankRow {
   display: grid;
-  grid-template-columns: minmax(46px, 92px) 1fr 24px;
+  grid-template-columns: minmax(64px, 112px) 1fr minmax(24px, auto);
   align-items: center;
   gap: 10px;
   font-size: 13px;
 }
 
+.rankRow.banRow {
+  grid-template-columns: minmax(116px, 1fr) auto;
+}
+
 .rankRow span {
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankRow em {
+  overflow: hidden;
+  color: #8da39f;
+  font-size: 12px;
+  font-style: normal;
+  text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -657,7 +684,7 @@ p {
 
 @media (max-height: 760px) and (min-width: 901px) {
   .appShell {
-    grid-template-columns: 282px minmax(0, 1fr);
+    grid-template-columns: 340px minmax(0, 1fr);
   }
 
   .sidebar {
@@ -702,8 +729,8 @@ p {
 
   .rankSwitch button {
     height: 24px;
-    padding: 0 4px;
-    font-size: 12px;
+    padding: 0 3px;
+    font-size: 11px;
   }
 
   .rankList {
@@ -711,9 +738,13 @@ p {
   }
 
   .rankRow {
-    grid-template-columns: minmax(44px, 80px) 1fr 22px;
+    grid-template-columns: minmax(58px, 104px) 1fr minmax(22px, auto);
     gap: 8px;
     font-size: 12px;
+  }
+
+  .rankRow.banRow {
+    grid-template-columns: minmax(110px, 1fr) auto;
   }
 
   .toolbar {

@@ -31,7 +31,8 @@ const TIMELINE_GAP = 10;
 const RANK_MODES = [
   ["countries", "Countries"],
   ["ips", "IPs"],
-  ["scenarios", "Scenarios"]
+  ["scenarios", "Scenarios"],
+  ["bans", "Bans"]
 ];
 const EMPTY_RANK_ITEMS = [];
 const RANK_MODE_STORAGE_PREFIX = "crowdsec-map-rank-mode";
@@ -98,7 +99,7 @@ function App() {
 }
 
 function Sidebar({ data, totals }) {
-  const rankings = useMemo(() => buildRankings(data?.alerts || []), [data?.alerts]);
+  const rankings = useMemo(() => buildRankings(data?.alerts || [], data?.activeBans || []), [data?.alerts, data?.activeBans]);
 
   return (
     <aside className="sidebar">
@@ -111,10 +112,10 @@ function Sidebar({ data, totals }) {
       </div>
 
       <div className="metricGrid">
+        <Metric icon={<ShieldAlert />} label="Active Bans" value={totals.activeBans || 0} />
         <Metric icon={<Activity />} label="Alerts" value={totals.alerts || 0} />
         <Metric icon={<Globe2 />} label="Countries" value={totals.countries || 0} />
         <Metric icon={<Crosshair />} label="Scenarios" value={totals.scenarios || 0} />
-        <Metric icon={<ShieldAlert />} label="Decisions" value={totals.bans || 0} />
       </div>
 
       <Panel rankings={rankings} initialMode="countries" storageKey="top" />
@@ -142,6 +143,7 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
   const headerRef = useRef(null);
   const measureRef = useRef(null);
   const items = rankings[mode] || EMPTY_RANK_ITEMS;
+  const isBanMode = mode === "bans";
   const max = Math.max(...items.map((item) => item.count), 1);
   const hasMeasuredLimit = Number.isFinite(visibleCount);
   const collapsedLimit = hasMeasuredLimit ? Math.max(1, visibleCount) : items.length;
@@ -196,7 +198,7 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
   }, [items]);
 
   return (
-    <section className={wide ? "panel panelWide" : "panel"} ref={panelRef}>
+    <section className={`${wide ? "panel panelWide" : "panel"} ${expanded ? "panelExpanded" : ""}`} ref={panelRef}>
       <div className="panelHeader" ref={headerRef}>
         <div className="rankSwitch" role="group" aria-label="Ranking mode">
           {RANK_MODES.map(([value, label]) => (
@@ -214,10 +216,16 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
       <div className="rankList">
         {items.length === 0 && <p className="empty">No data yet</p>}
         {visibleItems.map((item) => (
-          <div className="rankRow" key={item.label}>
+          <div className={isBanMode ? "rankRow banRow" : "rankRow"} key={item.label}>
             <span title={item.label}>{item.label}</span>
-            <div className="bar"><i style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} /></div>
-            <strong>{item.count}</strong>
+            {isBanMode ? (
+              <em title={item.detail || item.meta || ""}>{item.meta || item.detail || "active"}</em>
+            ) : (
+              <>
+                <div className="bar"><i style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} /></div>
+                <strong>{item.count}</strong>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -233,10 +241,16 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
       )}
       <div className="rankList rankMeasure" ref={measureRef} aria-hidden="true">
         {items.map((item) => (
-          <div className="rankRow" key={`${item.label}-measure`}>
+          <div className={isBanMode ? "rankRow banRow" : "rankRow"} key={`${item.label}-measure`}>
             <span>{item.label}</span>
-            <div className="bar"><i style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} /></div>
-            <strong>{item.count}</strong>
+            {isBanMode ? (
+              <em>{item.meta || item.detail || "active"}</em>
+            ) : (
+              <>
+                <div className="bar"><i style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} /></div>
+                <strong>{item.count}</strong>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -566,11 +580,17 @@ function Timeline({ attacks, error }) {
   );
 }
 
-function buildRankings(attacks) {
+function buildRankings(attacks, activeBans) {
   return {
     countries: groupCounts(attacks, "country"),
     ips: groupCounts(attacks, "ip"),
-    scenarios: groupCounts(attacks, "scenario")
+    scenarios: groupCounts(attacks, "scenario"),
+    bans: activeBans.map((ban) => ({
+      label: ban.ip,
+      count: 1,
+      meta: ban.duration || "active",
+      detail: [ban.country, ban.scenario].filter(Boolean).join(" · ")
+    }))
   };
 }
 

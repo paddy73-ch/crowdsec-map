@@ -23,7 +23,9 @@ Die App kann mehrere Quellen lesen. Im UI kannst du zwischen `Auto`, `LAPI alert
 - `Source` ist direkt in der Toolbar auswählbar.
 - `Intervall` ist direkt in der Toolbar auswählbar: `30s`, `1min`, `5min`, `30min`.
 - Die Intervall-Auswahl, die Ranking-Umschalter und die Anzahl der Timeline-Zeilen bleiben nach einem Seiten-Refresh im Browser erhalten.
-- Die Ranking-Panels können zwischen `Countries`, `IPs` und `Scenarios` umgeschaltet werden.
+- Links oben zeigt `Active Bans` die aktuell aktiven CrowdSec-Ban-Decisions.
+- Die Ranking-Panels können zwischen `Countries`, `IPs`, `Scenarios` und `Bans` umgeschaltet werden.
+- `Bans` listet die aktiv gebannten IPs mit ihrer Restlaufzeit.
 - Die Timeline gruppiert Alerts nach Quell-IP und Minute. Bei mehr Einträgen kann die Timeline auf bis zu drei Zeilen erweitert werden.
 
 ### Variante A: `cscli` per bestehendem CrowdSec-Container

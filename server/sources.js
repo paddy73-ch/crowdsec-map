@@ -39,6 +39,15 @@ export async function readCrowdSecData(requestedSource = config.dataSource) {
   return fallback;
 }
 
+export async function readActiveBans() {
+  const command = config.crowdsecContainer
+    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "decisions", "list", "-o", "json"]]
+    : ["cscli", ["decisions", "list", "-o", "json"]];
+
+  const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
+  return normalizeActiveBans(JSON.parse(stdout));
+}
+
 async function readCscliAlerts() {
   const command = config.crowdsecContainer
     ? ["docker", ["exec", config.crowdsecContainer, "sh", "-lc", config.cscliCommand]]
@@ -110,6 +119,42 @@ function limitPayload(payload, limit) {
   }
 
   return payload;
+}
+
+function normalizeActiveBans(payload) {
+  const rawItems = Array.isArray(payload) ? payload : payload?.items || payload?.decisions || [];
+  const bans = [];
+
+  rawItems.forEach((item, index) => {
+    const decisions = Array.isArray(item.decisions) ? item.decisions : [item];
+    decisions
+      .filter((decision) => decision?.type === "ban" && decision.simulated !== true)
+      .forEach((decision, decisionIndex) => {
+        const ip = decision.value || item.source?.ip || item.value || "";
+        if (!ip) {
+          return;
+        }
+
+        bans.push({
+          id: String(decision.id || `${ip}-${index}-${decisionIndex}`),
+          ip,
+          country: item.source?.cn || item.country || "",
+          scenario: String(decision.scenario || item.scenario || item.reason || "ban").replace(/^crowdsecurity\//, ""),
+          duration: decision.duration || decision.expiration || "",
+          origin: decision.origin || item.origin || "",
+          scope: decision.scope || item.source?.scope || item.scope || "Ip"
+        });
+      });
+  });
+
+  const byIp = new Map();
+  bans.forEach((ban) => {
+    if (!byIp.has(ban.ip)) {
+      byIp.set(ban.ip, ban);
+    }
+  });
+
+  return [...byIp.values()].sort((a, b) => a.ip.localeCompare(b.ip));
 }
 
 async function getWatcherToken() {
