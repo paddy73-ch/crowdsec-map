@@ -174,12 +174,32 @@ p {
   flex: 1 1 auto;
   gap: 10px;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-color: rgba(151, 181, 176, 0.28) transparent;
+  scrollbar-width: thin;
 }
 
-.panelExpanded .rankList:not(.rankMeasure) {
-  overflow: auto;
-  padding-right: 3px;
+.rankList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rankList::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: rgba(151, 181, 176, 0.24);
+}
+
+.rankList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rankOverflowHint {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  height: 26px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(14, 28, 32, 0), rgba(14, 28, 32, 0.92));
 }
 
 .rankRow {

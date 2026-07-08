@@ -137,7 +137,6 @@ function Metric({ icon, label, value }) {
 
 function Panel({ rankings, initialMode, storageKey, wide = false }) {
   const [mode, setMode] = useState(() => readStoredRankMode(storageKey, initialMode));
-  const [expanded, setExpanded] = useState(false);
   const [visibleCount, setVisibleCount] = useState(Number.POSITIVE_INFINITY);
   const panelRef = useRef(null);
   const headerRef = useRef(null);
@@ -147,12 +146,8 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
   const max = Math.max(...items.map((item) => item.count), 1);
   const hasMeasuredLimit = Number.isFinite(visibleCount);
   const collapsedLimit = hasMeasuredLimit ? Math.max(1, visibleCount) : items.length;
-  const visibleItems = expanded ? items : items.slice(0, collapsedLimit);
+  const visibleItems = items;
   const hasMore = items.length > collapsedLimit;
-
-  useLayoutEffect(() => {
-    setExpanded(false);
-  }, [mode]);
 
   useEffect(() => {
     window.localStorage.setItem(`${RANK_MODE_STORAGE_PREFIX}:${storageKey}`, mode);
@@ -198,7 +193,7 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
   }, [items]);
 
   return (
-    <section className={`${wide ? "panel panelWide" : "panel"} ${expanded ? "panelExpanded" : ""}`} ref={panelRef}>
+    <section className={wide ? "panel panelWide" : "panel"} ref={panelRef}>
       <div className="panelHeader" ref={headerRef}>
         <div className="rankSwitch" role="group" aria-label="Ranking mode">
           {RANK_MODES.map(([value, label]) => (
@@ -229,16 +224,7 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
           </div>
         ))}
       </div>
-      {!expanded && hasMore && (
-        <button
-          type="button"
-          className="rankMore"
-          onClick={() => setExpanded(true)}
-          title="Show all"
-        >
-          ...
-        </button>
-      )}
+      {hasMore && <div className="rankOverflowHint" aria-hidden="true" />}
       <div className="rankList rankMeasure" ref={measureRef} aria-hidden="true">
         {items.map((item) => (
           <div className={isBanMode ? "rankRow banRow" : "rankRow"} key={`${item.label}-measure`}>
