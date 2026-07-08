@@ -346,6 +346,42 @@ p {
   stroke-width: 1.5;
 }
 
+.ageLegend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  padding: 0 28px 4px;
+  color: #8da39f;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.ageLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ageDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.ageDot.ageHot {
+  background: #ff575e;
+}
+
+.ageDot.ageWarm {
+  background: #ff984f;
+}
+
+.ageDot.ageOld {
+  background: #ffcf6e;
+}
+
 .timeline {
   display: grid;
   grid-template-columns: repeat(9, minmax(104px, 1fr));
@@ -358,6 +394,20 @@ p {
 .warning {
   min-width: 104px;
   padding: 9px 10px;
+}
+
+.timeline article.ageHot {
+  border-color: rgba(255, 87, 94, 0.32);
+  background: linear-gradient(180deg, rgba(255, 87, 94, 0.11), rgba(14, 28, 32, 0.82) 58%);
+}
+
+.timeline article.ageWarm {
+  border-color: rgba(255, 152, 79, 0.28);
+  background: linear-gradient(180deg, rgba(255, 152, 79, 0.1), rgba(14, 28, 32, 0.82) 58%);
+}
+
+.timeline article.ageOld {
+  border-color: rgba(255, 207, 110, 0.2);
 }
 
 .timeline strong {
@@ -472,9 +522,13 @@ p {
     padding: 0 24px;
   }
 
+  .ageLegend {
+    padding: 0 24px 3px;
+  }
+
   .timeline {
     gap: 8px;
-    padding: 8px 24px 10px;
+    padding: 7px 24px 10px;
   }
 
   .timeline article,
@@ -527,6 +581,11 @@ p {
   .toolbarStatus {
     justify-content: space-between;
     min-height: 24px;
+  }
+
+  .ageLegend {
+    justify-content: flex-start;
+    overflow-x: auto;
   }
 
   .toolbar label {

@@ -64,6 +64,7 @@ function App() {
           onRefresh={loadData}
         />
         <WorldMap attacks={attacks} />
+        <AgeLegend />
         <Timeline attacks={attacks} error={error || data?.warning} />
       </section>
     </main>
@@ -280,6 +281,16 @@ function createArcPath(attack) {
   return `M${attack.x},${attack.y} Q${(attack.x + attack.hx) / 2},${Math.min(attack.y, attack.hy) - lift} ${attack.hx},${attack.hy}`;
 }
 
+function AgeLegend() {
+  return (
+    <div className="ageLegend" aria-label="Attack age legend">
+      <span><i className="ageDot ageHot" /> &lt; 15m</span>
+      <span><i className="ageDot ageWarm" /> &lt; 1h</span>
+      <span><i className="ageDot ageOld" /> &gt; 1h</span>
+    </div>
+  );
+}
+
 function Timeline({ attacks, error }) {
   const recent = [...attacks]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -289,7 +300,7 @@ function Timeline({ attacks, error }) {
     <footer className="timeline">
       {error && <div className="warning">{error}</div>}
       {recent.map((attack) => (
-        <article key={`${attack.id}-timeline`}>
+        <article className={getAgeClass(attack.createdAt)} key={`${attack.id}-timeline`}>
           <span>{formatTime(attack.createdAt)}</span>
           <strong>{attack.country}</strong>
           <p>{attack.scenario}</p>
