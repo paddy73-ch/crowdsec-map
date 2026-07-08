@@ -12,7 +12,8 @@ app.get("/api/health", (_request, response) => {
   response.json({
     ok: true,
     source: config.dataSource,
-    refreshSeconds: config.refreshSeconds
+    refreshSeconds: config.refreshSeconds,
+    publicTargetIp: config.publicTargetIp
   });
 });
 
@@ -21,6 +22,7 @@ app.get("/api/attacks", async (request, response) => {
   response.json({
     ...data,
     refreshSeconds: config.refreshSeconds,
+    publicTargetIp: config.publicTargetIp,
     topCountries: groupCounts(data.alerts, "country"),
     topScenarios: groupCounts(data.alerts, "scenario")
   });

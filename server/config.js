@@ -9,8 +9,7 @@ export const config = {
   lapiPassword: process.env.LAPI_PASSWORD || "",
   lapiApiKey: process.env.LAPI_API_KEY || "",
   lapiLimit: Number(process.env.LAPI_LIMIT || 250),
-  targetIp: process.env.TARGET_IP || "",
-  targetHost: process.env.TARGET_HOST || "",
+  publicTargetIp: process.env.PUBLIC_TARGET_IP || "",
   staticDir: process.env.STATIC_DIR || "dist"
 };
 

@@ -1,5 +1,4 @@
 import geoip from "geoip-lite";
-import { config } from "./config.js";
 
 export function normalizeCrowdSecPayload(payload, sourceLabel) {
   const rawItems = Array.isArray(payload) ? payload : payload?.items || payload?.alerts || payload?.decisions || [];
@@ -22,7 +21,6 @@ function normalizeItem(item, index) {
   const scenario = formatScenarioName(item.scenario || item.scenario_hash || item.scenario_version || item.reason || item.type || "unknown");
   const ip = source.ip || item.ip || item.value || firstDecision.value || item.scope_value || "";
   const geo = resolveGeo(source, ip);
-  const target = resolveTarget(item);
   const createdAt = item.created_at || item.start_at || item.until || item.createdAt || item.created || new Date().toISOString();
 
   if (!geo.latitude || !geo.longitude) {
@@ -39,62 +37,10 @@ function normalizeItem(item, index) {
     scenario,
     decisionType: firstDecision.type || item.decisionType || item.type || item.decision_type || "alert",
     value: firstDecision.value || item.value || ip,
-    targetIp: target.ip,
-    targetHost: target.host,
     createdAt,
     count: Number(item.events_count || item.events?.length || item.count || 1),
     asName: source.as_name || source.asName || ""
   };
-}
-
-function resolveTarget(item) {
-  const eventMeta = firstMetaMap(item.events);
-  const alertMeta = metaArrayToObject(item.meta);
-  const host = config.targetHost || eventMeta.target_fqdn || eventMeta.target_host || alertMeta.target_fqdn || "";
-  const ip = config.targetIp || eventMeta.target_ip || eventMeta.destination_ip || alertMeta.target_ip || "";
-
-  return {
-    host: stripJsonArray(host),
-    ip: stripJsonArray(ip)
-  };
-}
-
-function firstMetaMap(events) {
-  if (!Array.isArray(events)) {
-    return {};
-  }
-
-  for (const event of events) {
-    const meta = metaArrayToObject(event.meta);
-    if (Object.keys(meta).length > 0) {
-      return meta;
-    }
-  }
-  return {};
-}
-
-function metaArrayToObject(meta) {
-  if (!Array.isArray(meta)) {
-    return {};
-  }
-
-  return Object.fromEntries(meta.map((item) => [item.key, item.value]).filter(([key]) => key));
-}
-
-function stripJsonArray(value) {
-  if (!value) {
-    return "";
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      return parsed.join(", ");
-    }
-  } catch {
-    // Plain CrowdSec meta values are not JSON encoded.
-  }
-  return String(value);
 }
 
 function resolveGeo(source, ip) {

@@ -184,6 +184,19 @@ p {
   letter-spacing: 0;
 }
 
+.titleLine {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.titleLine span {
+  color: #68ddc6;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .toolbarControls {
   display: flex;
   align-items: end;
@@ -425,18 +438,6 @@ p {
   white-space: nowrap;
 }
 
-.timeline em {
-  display: block;
-  overflow: hidden;
-  margin-top: 3px;
-  color: #8fdcca;
-  font-size: 11px;
-  font-style: normal;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .warning {
   grid-column: 1 / -1;
   color: #ffd4a8;
@@ -514,6 +515,10 @@ p {
 
   .toolbar h2 {
     font-size: 24px;
+  }
+
+  .titleLine {
+    gap: 10px;
   }
 
   .toolbar select,

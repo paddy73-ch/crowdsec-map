@@ -129,7 +129,10 @@ function Toolbar({ source, setSource, data, loading, onRefresh }) {
   return (
     <header className="toolbar">
       <div>
-        <h2>Live attacks</h2>
+        <div className="titleLine">
+          <h2>Live attacks</h2>
+          {data?.publicTargetIp && <span>{data.publicTargetIp}</span>}
+        </div>
         <p>Last update {formatTime(data?.generatedAt)}</p>
       </div>
       <div className="toolbarControls">
@@ -205,7 +208,7 @@ function WorldMap({ attacks }) {
           <g className={`attackPoint ${getAgeClass(attack.createdAt)}`} key={attack.id}>
             <circle cx={attack.x} cy={attack.y} r={Math.min(22, 7 + attack.count)} fill="url(#pulse)" />
             <circle cx={attack.x} cy={attack.y} r={Math.min(9, 3 + attack.count / 2)} />
-            <title>{`${attack.country} ${attack.sourceCount} source${attack.sourceCount === 1 ? "" : "s"} ${attack.scenario}${formatTarget(attack) ? ` -> ${formatTarget(attack)}` : ""}`}</title>
+            <title>{`${attack.country} ${attack.sourceCount} source${attack.sourceCount === 1 ? "" : "s"} ${attack.scenario}`}</title>
           </g>
         ))}
       </svg>
@@ -304,15 +307,10 @@ function Timeline({ attacks, error }) {
           <span>{formatTime(attack.createdAt)}</span>
           <strong>{attack.country}</strong>
           <p>{attack.scenario}</p>
-          {formatTarget(attack) && <em title={formatTarget(attack)}>→ {formatTarget(attack)}</em>}
         </article>
       ))}
     </footer>
   );
-}
-
-function formatTarget(attack) {
-  return attack.targetIp || attack.targetHost || "";
 }
 
 function formatTime(value) {
