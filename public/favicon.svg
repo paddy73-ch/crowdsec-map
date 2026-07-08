@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CrowdSec Map">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#17353a"/>
+      <stop offset="1" stop-color="#081013"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="16" y1="10" x2="48" y2="54" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8df5df"/>
+      <stop offset="1" stop-color="#3db9aa"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#24474d" stroke-width="2"/>
+  <path d="M12 32h40M32 11c-7 6-11 13-11 21s4 15 11 21M32 11c7 6 11 13 11 21s-4 15-11 21" fill="none" stroke="#315960" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M32 12l17 6v13c0 11-7 18-17 22-10-4-17-11-17-22V18l17-6z" fill="#0e2227" stroke="url(#shield)" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M25 32l5 5 10-13" fill="none" stroke="#8df5df" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="19" r="5" fill="#ff575e"/>
+  <circle cx="48" cy="19" r="8" fill="none" stroke="#ff575e" stroke-opacity=".32" stroke-width="3"/>
+</svg>
