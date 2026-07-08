@@ -4,9 +4,11 @@ import { Activity, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Globe2, M
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
+import packageInfo from "../package.json";
 import "./styles.css";
 
 const countries = feature(world, world.objects.countries).features;
+const APP_VERSION = `v${packageInfo.version}`;
 const HOME = { latitude: 47.3769, longitude: 8.5417 };
 const SOURCE_OPTIONS = [
   ["auto", "Auto"],
@@ -132,7 +134,7 @@ function Sidebar({ data, totals }) {
         <span className="brandMark"><ShieldAlert size={22} /></span>
         <div>
           <h1>CrowdSec Map</h1>
-          <p>Live attacks</p>
+          <p>Live attacks <small>{APP_VERSION}</small></p>
         </div>
       </div>
 
@@ -713,6 +715,8 @@ function IpDetailModal({ ip, days, onClose }) {
               </div>
             </div>
 
+            <IpLookupBlock ip={ip} />
+
             <div className="recentEvents">
               <h4>Recent history events</h4>
               {detail.recentEvents.length === 0 ? (
@@ -752,6 +756,156 @@ function IpDetailModal({ ip, days, onClose }) {
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function IpLookupBlock({ ip }) {
+  const [reputation, setReputation] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const shodanUrl = `https://www.shodan.io/host/${encodeURIComponent(ip)}`;
+
+  const loadStats = useCallback(async () => {
+    try {
+      const response = await fetch("/api/reputation/stats");
+      if (response.ok) {
+        setStats(await response.json());
+      }
+    } catch {
+      setStats(null);
+    }
+  }, []);
+
+  const loadReputation = useCallback(async (options = {}) => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (options.refresh) {
+        params.set("refresh", "1");
+      }
+      const suffix = params.toString() ? `?${params}` : "";
+      const response = await fetch(`/api/reputation/ip/${encodeURIComponent(ip)}${suffix}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      setReputation(payload);
+      setStats(payload.stats || null);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [ip]);
+
+  useEffect(() => {
+    setReputation(null);
+    setError("");
+    loadStats();
+  }, [ip, loadStats]);
+
+  return (
+    <div className="lookupBlock">
+      <div className="lookupHeader">
+        <div>
+          <h4><ShieldAlert size={15} /> IP lookup</h4>
+          <p>External reputation checks only run when selected.</p>
+        </div>
+        {stats && <span>{stats.networkRequests} CTI request{stats.networkRequests === 1 ? "" : "s"} this month</span>}
+      </div>
+      <div className="lookupActions">
+        <button type="button" onClick={() => loadReputation()} disabled={loading}>
+          <ShieldAlert size={14} className={loading ? "spin" : ""} /> CrowdSec CTI
+        </button>
+        <a href={shodanUrl} target="_blank" rel="noreferrer">
+          <Crosshair size={14} /> Shodan.io
+        </a>
+      </div>
+      {stats && (
+        <p className="lookupStats">
+          Cache hits {stats.cacheHits} · cached IPs {stats.cachedIps} · cache {stats.cacheHours}h
+        </p>
+      )}
+      {(reputation || error) && (
+        <CtiReputationBlock
+          reputation={reputation}
+          warning={error}
+          onRefresh={() => loadReputation({ refresh: true })}
+          loading={loading}
+        />
+      )}
+    </div>
+  );
+}
+
+function CtiReputationBlock({ reputation, warning, onRefresh, loading }) {
+  if (!reputation && !warning) {
+    return null;
+  }
+
+  const status = reputation?.status || "error";
+  const statusLabel = {
+    false_positive: "false positive",
+    malicious: "malicious",
+    suspicious: "suspicious",
+    unknown: "unknown",
+    not_configured: "not configured",
+    error: "error"
+  }[status] || status;
+
+  return (
+    <div className={`ctiBlock cti-${status}`}>
+      <div className="ctiHeader">
+        <div>
+          <h4><ShieldAlert size={15} /> CrowdSec CTI reputation</h4>
+          <p>{warning || reputation?.summary || "No CrowdSec CTI data available."}</p>
+        </div>
+        <span>{statusLabel}</span>
+      </div>
+
+      {warning ? (
+        <div className="warning">cti: {warning}</div>
+      ) : (
+        <>
+          <div className="ctiGrid">
+            <div>
+              <span>Maliciousness</span>
+              <strong>{formatCtiScore(reputation.maliciousness, "percent")}</strong>
+            </div>
+            <div>
+              <span>Background noise</span>
+              <strong>{formatCtiScore(reputation.backgroundNoise, "ten")}</strong>
+            </div>
+            <div>
+              <span>Cache</span>
+              <strong title={reputation.cachedAt}>
+                {reputation.cached ? `cached ${formatRelativeTime(reputation.cachedAt)}` : "fresh"}
+              </strong>
+            </div>
+          </div>
+
+          {reputation.behaviors?.length > 0 && (
+            <div className="ctiTags" aria-label="CrowdSec CTI behaviors">
+              {reputation.behaviors.map((behavior) => <span key={behavior}>{behavior}</span>)}
+            </div>
+          )}
+
+          {reputation.configured ? (
+            <div className="ctiActions">
+              <a href={reputation.webUrl} target="_blank" rel="noreferrer">Open CrowdSec CTI</a>
+              <button type="button" onClick={onRefresh} disabled={loading} title={`Refresh CTI, cache is ${reputation.cacheHours}h`}>
+                <RefreshCcw size={14} className={loading ? "spin" : ""} /> Refresh CTI
+              </button>
+            </div>
+          ) : (
+            <p className="ctiHint">Set CTI_API_KEY to enable on-demand reputation checks. Results are cached for {reputation.cacheHours}h.</p>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -1139,6 +1293,20 @@ function formatRelativeTime(value) {
     return `${diffHours}h ago`;
   }
   return `${Math.round(diffHours / 24)}d ago`;
+}
+
+function formatCtiScore(value, scale) {
+  if (value === null || value === undefined || value === "") {
+    return "n/a";
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "n/a";
+  }
+  if (scale === "percent") {
+    return `${Math.round(number * 100)}%`;
+  }
+  return `${number}/10`;
 }
 
 function isIpv4(value) {

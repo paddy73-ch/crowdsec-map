@@ -12,6 +12,10 @@ export const config = {
   publicTargetIp: process.env.PUBLIC_TARGET_IP || "",
   historyFile: process.env.HISTORY_FILE || "data/history.jsonl",
   historyRetentionDays: Number(process.env.HISTORY_RETENTION_DAYS || 90),
+  ctiApiKey: process.env.CTI_API_KEY || "",
+  ctiApiUrl: trimTrailingSlash(process.env.CTI_API_URL || "https://cti.api.crowdsec.net/v2"),
+  ctiCacheFile: process.env.CTI_CACHE_FILE || "data/cti-cache.json",
+  ctiCacheHours: Number(process.env.CTI_CACHE_HOURS || 72),
   staticDir: process.env.STATIC_DIR || "dist"
 };
 

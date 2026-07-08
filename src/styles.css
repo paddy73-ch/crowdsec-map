@@ -48,6 +48,7 @@ select {
 
 .themeLight .brand p,
 .themeLight .toolbar p,
+.themeLight .brand small,
 .themeLight .metric span,
 .themeLight .timeline span,
 .themeLight .rankSwitch button,
@@ -159,6 +160,8 @@ select {
 }
 
 .themeLight .ipMetaGrid div,
+.themeLight .lookupBlock,
+.themeLight .ctiBlock,
 .themeLight .recentEvents,
 .themeLight .rawBlock,
 .themeLight .modalLoading {
@@ -170,6 +173,11 @@ select {
 .themeLight .rawHeader p,
 .themeLight .recentEvents p,
 .themeLight .ipMetaGrid span,
+.themeLight .ctiHeader p,
+.themeLight .lookupHeader p,
+.themeLight .lookupStats,
+.themeLight .ctiGrid span,
+.themeLight .ctiHint,
 .themeLight .eventRow time,
 .themeLight .eventRow em,
 .themeLight .groupIpRow em,
@@ -178,7 +186,11 @@ select {
 }
 
 .themeLight .modalHeader button,
-.themeLight .rawActions button {
+.themeLight .rawActions button,
+.themeLight .lookupActions button,
+.themeLight .lookupActions a,
+.themeLight .ctiActions button,
+.themeLight .ctiActions a {
   color: #122321;
   border-color: rgba(39, 87, 82, 0.16);
   background: rgba(255, 255, 255, 0.82);
@@ -186,8 +198,27 @@ select {
 
 .themeLight .rawBlock pre,
 .themeLight .eventRow,
+.themeLight .lookupBlock,
+.themeLight .ctiBlock,
 .themeLight .groupIpRow {
   color: #122321;
+}
+
+.themeLight .ctiGrid div {
+  border-color: rgba(39, 87, 82, 0.12);
+  background: rgba(238, 247, 245, 0.76);
+}
+
+.themeLight .ctiTags span {
+  color: #31514c;
+  border-color: rgba(39, 87, 82, 0.13);
+  background: rgba(104, 221, 198, 0.13);
+}
+
+.themeLight .lookupHeader span {
+  color: #107c71;
+  border-color: rgba(16, 124, 113, 0.18);
+  background: rgba(104, 221, 198, 0.14);
 }
 
 .themeLight .historyTable tr.clickableRow:hover td {
@@ -479,6 +510,13 @@ p {
 .titleLine span {
   color: #68ddc6;
   font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.brand small {
+  color: #8da39f;
+  font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1051,11 +1089,10 @@ p {
 
 .ipModal {
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   gap: 14px;
   width: min(980px, 100%);
   max-height: min(820px, calc(100vh - 48px));
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid rgba(151, 181, 176, 0.18);
   border-radius: 8px;
   background: rgba(9, 18, 21, 0.96);
@@ -1131,6 +1168,8 @@ p {
 }
 
 .ipMetaGrid div,
+.lookupBlock,
+.ctiBlock,
 .recentEvents,
 .rawBlock {
   border: 1px solid rgba(151, 181, 176, 0.14);
@@ -1149,6 +1188,193 @@ p {
   margin-top: 4px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.lookupBlock,
+.ctiBlock {
+  display: grid;
+  gap: 12px;
+  margin: 0 18px;
+  padding: 14px;
+}
+
+.lookupBlock .ctiBlock {
+  margin: 0;
+}
+
+.lookupHeader,
+.ctiHeader,
+.ctiActions {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lookupHeader h4,
+.ctiHeader h4,
+.recentEvents h4,
+.rawHeader h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.lookupHeader span {
+  flex: 0 0 auto;
+  border: 1px solid rgba(104, 221, 198, 0.18);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #68ddc6;
+  background: rgba(104, 221, 198, 0.1);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lookupActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lookupActions button,
+.lookupActions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #e8f3f1;
+  background: #102025;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.lookupActions button {
+  cursor: pointer;
+}
+
+.lookupActions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.lookupHeader p,
+.lookupStats {
+  margin: 4px 0 0;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.ctiHeader span {
+  flex: 0 0 auto;
+  border: 1px solid rgba(151, 181, 176, 0.16);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #081013;
+  background: #8da39f;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cti-malicious .ctiHeader span {
+  background: #ff575e;
+}
+
+.cti-suspicious .ctiHeader span {
+  background: #ffcf6e;
+}
+
+.cti-unknown .ctiHeader span,
+.cti-not_configured .ctiHeader span {
+  color: #d9e8e5;
+  background: rgba(151, 181, 176, 0.18);
+}
+
+.cti-false_positive .ctiHeader span {
+  background: #68ddc6;
+}
+
+.ctiGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ctiGrid div {
+  min-width: 0;
+  border: 1px solid rgba(151, 181, 176, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(8, 16, 19, 0.28);
+}
+
+.ctiGrid span,
+.ctiHeader p,
+.ctiHint {
+  margin: 4px 0 0;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.ctiGrid strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctiTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.ctiTags span {
+  border: 1px solid rgba(151, 181, 176, 0.12);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #d9e8e5;
+  background: rgba(104, 221, 198, 0.09);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ctiActions {
+  align-items: center;
+}
+
+.ctiActions button,
+.ctiActions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #e8f3f1;
+  background: #102025;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ctiActions button {
+  cursor: pointer;
+}
+
+.ctiActions button:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .recentEvents {
@@ -1229,6 +1455,7 @@ p {
 
 .groupModal {
   grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .groupIpList {
@@ -1539,7 +1766,20 @@ p {
   }
 
   .ipSummaryGrid,
-  .ipMetaGrid {
+  .ipMetaGrid,
+  .ctiGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .ctiHeader,
+  .lookupHeader,
+  .ctiActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lookupActions {
+    display: grid;
     grid-template-columns: 1fr;
   }
 

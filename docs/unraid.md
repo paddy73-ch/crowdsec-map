@@ -21,6 +21,9 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `Appdata`: `/mnt/user/appdata/crowdsec-map` is mounted to `/app/data` for the History view.
 - `HISTORY_FILE`: `/app/data/history.jsonl`
 - `HISTORY_RETENTION_DAYS`: `90`
+- `CTI_API_KEY`: optional CrowdSec CTI API key for on-demand IP reputation checks.
+- `CTI_CACHE_FILE`: `/app/data/cti-cache.json`
+- `CTI_CACHE_HOURS`: `72`
 - Docker socket mount is optional but required when using `cscli` via `CROWDSEC_CONTAINER`.
 - LAPI mode avoids Docker socket access and is preferred when you have watcher or bouncer credentials.
 

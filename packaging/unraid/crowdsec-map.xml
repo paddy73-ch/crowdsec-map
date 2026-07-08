@@ -33,6 +33,9 @@
   <Config Name="Public Target IP" Target="PUBLIC_TARGET_IP" Default="" Description="Optional target IP displayed in the dashboard header." Type="Variable" Display="always" Required="false" Mask="false"/>
   <Config Name="History File" Target="HISTORY_FILE" Default="/app/data/history.jsonl" Description="Persistent JSONL file used by the History view." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data/history.jsonl</Config>
   <Config Name="History Retention Days" Target="HISTORY_RETENTION_DAYS" Default="90" Description="Number of days kept in the local History view." Type="Variable" Display="advanced" Required="true" Mask="false">90</Config>
+  <Config Name="CrowdSec CTI API Key" Target="CTI_API_KEY" Default="" Description="Optional CrowdSec CTI API key for on-demand IP reputation checks." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <Config Name="CTI Cache File" Target="CTI_CACHE_FILE" Default="/app/data/cti-cache.json" Description="Persistent CrowdSec CTI reputation cache file." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data/cti-cache.json</Config>
+  <Config Name="CTI Cache Hours" Target="CTI_CACHE_HOURS" Default="72" Description="CrowdSec CTI cache duration in hours." Type="Variable" Display="advanced" Required="true" Mask="false">72</Config>
   <Config Name="Appdata" Target="/app/data" Default="/mnt/user/appdata/crowdsec-map" Mode="rw" Description="Persistent CrowdSec Map data directory for History." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/crowdsec-map</Config>
   <Config Name="Docker Socket" Target="/var/run/docker.sock" Default="/var/run/docker.sock" Mode="ro" Description="Optional. Required for cscli mode and active bans via CrowdSec container." Type="Path" Display="advanced" Required="false" Mask="false">/var/run/docker.sock</Config>
 </Container>

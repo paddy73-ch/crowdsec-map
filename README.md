@@ -94,6 +94,9 @@ environment:
 | `LAPI_API_KEY` | Bouncer key for decisions |
 | `HISTORY_FILE` | Persistent JSONL history file, default `data/history.jsonl` |
 | `HISTORY_RETENTION_DAYS` | History retention window, default `90` |
+| `CTI_API_KEY` | Optional CrowdSec CTI API key for on-demand IP reputation checks |
+| `CTI_CACHE_FILE` | Persistent CTI cache file, default `data/cti-cache.json` |
+| `CTI_CACHE_HOURS` | CTI cache duration, default `72` |
 
 ## Docker Image, Unraid, and Home Assistant
 

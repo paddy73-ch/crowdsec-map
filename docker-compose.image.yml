@@ -18,6 +18,9 @@ services:
       PUBLIC_TARGET_IP: "${PUBLIC_TARGET_IP:-}"
       HISTORY_FILE: "/app/data/history.jsonl"
       HISTORY_RETENTION_DAYS: "90"
+      CTI_API_KEY: "${CTI_API_KEY:-}"
+      CTI_CACHE_FILE: "/app/data/cti-cache.json"
+      CTI_CACHE_HOURS: "72"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - crowdsec-map-data:/app/data
