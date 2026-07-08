@@ -109,7 +109,7 @@ GitHub Actions builds the image as:
 ghcr.io/paddy73-ch/crowdsec-map:latest
 ```
 
-- Unraid: see [docs/unraid.md](docs/unraid.md) and [packaging/unraid/crowdsec-map.xml](packaging/unraid/crowdsec-map.xml)
+- Unraid: see [docs/unraid.md](docs/unraid.md) and [packaging/unraid/crowdsec-map.xml](packaging/unraid/crowdsec-map.xml). The template is provided but has not yet been verified on a real Unraid installation.
 - Home Assistant: see [docs/home-assistant.md](docs/home-assistant.md)
 - Generic Docker Compose image setup: see [docker-compose.image.yml](docker-compose.image.yml)
 

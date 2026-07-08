@@ -1,5 +1,7 @@
 # Unraid Template
 
+> This template is provided for Unraid users, but it has not yet been verified on a real Unraid installation by the project maintainer.
+
 The Unraid template in `packaging/unraid/crowdsec-map.xml` runs the published Docker image:
 
 ```text
