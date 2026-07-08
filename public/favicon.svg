@@ -1,19 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CrowdSec Map">
   <defs>
     <radialGradient id="bg" cx="50%" cy="42%" r="62%">
-      <stop offset="0" stop-color="#17353a"/>
-      <stop offset="1" stop-color="#081013"/>
+      <stop offset="0" stop-color="#14353a"/>
+      <stop offset="1" stop-color="#061013"/>
     </radialGradient>
-    <linearGradient id="shield" x1="16" y1="10" x2="48" y2="54" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8df5df"/>
-      <stop offset="1" stop-color="#3db9aa"/>
-    </linearGradient>
+    <radialGradient id="globe" cx="50%" cy="43%" r="52%">
+      <stop offset="0" stop-color="#173a41"/>
+      <stop offset="1" stop-color="#0a1b20"/>
+    </radialGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-  <circle cx="32" cy="32" r="21" fill="none" stroke="#24474d" stroke-width="2"/>
-  <path d="M12 32h40M32 11c-7 6-11 13-11 21s4 15 11 21M32 11c7 6 11 13 11 21s-4 15-11 21" fill="none" stroke="#315960" stroke-width="1.8" stroke-linecap="round"/>
-  <path d="M32 12l17 6v13c0 11-7 18-17 22-10-4-17-11-17-22V18l17-6z" fill="#0e2227" stroke="url(#shield)" stroke-width="3" stroke-linejoin="round"/>
-  <path d="M25 32l5 5 10-13" fill="none" stroke="#8df5df" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="48" cy="19" r="5" fill="#ff575e"/>
-  <circle cx="48" cy="19" r="8" fill="none" stroke="#ff575e" stroke-opacity=".32" stroke-width="3"/>
+  <circle cx="32" cy="32" r="23" fill="url(#globe)" stroke="#1d5a5f" stroke-width="2"/>
+  <path d="M9 32h46M32 9v46M16 20c8 4 24 4 32 0M16 44c8-4 24-4 32 0M32 9c-7 7-11 14-11 23s4 16 11 23M32 9c7 7 11 14 11 23s-4 16-11 23" fill="none" stroke="#2e6068" stroke-width="1.4" stroke-linecap="round" opacity=".72"/>
+  <circle cx="32" cy="32" r="7.5" fill="none" stroke="#65e8da" stroke-width="1.6" opacity=".7"/>
+  <circle cx="32" cy="32" r="15" fill="none" stroke="#65e8da" stroke-width="1.2" opacity=".33"/>
+  <path d="M32 32 47 18" fill="none" stroke="#8df5df" stroke-width="2.1" stroke-linecap="round" opacity=".88"/>
+  <path d="M32 32c-6-2-12-1-17 4M32 32c8 1 14 5 18 12M32 32c-2-8-8-13-16-15" fill="none" stroke="#ffd66b" stroke-width="1.6" stroke-linecap="round" opacity=".74"/>
+  <circle cx="32" cy="32" r="4.4" fill="#8df5df" filter="url(#softGlow)"/>
+  <circle cx="47" cy="18" r="4.2" fill="#ff5b62" filter="url(#softGlow)"/>
+  <circle cx="16" cy="17" r="2.9" fill="#ff9a55"/>
+  <circle cx="50" cy="44" r="3.3" fill="#ffcf6b"/>
+  <circle cx="15" cy="36" r="2.5" fill="#ff6b62"/>
 </svg>
