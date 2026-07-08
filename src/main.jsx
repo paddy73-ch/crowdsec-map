@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, Crosshair, Globe2, RefreshCcw, ShieldAlert, Timer } from "lucide-react";
+import { Activity, ChevronDown, ChevronUp, Crosshair, Globe2, RefreshCcw, ShieldAlert, Timer } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -10,16 +10,36 @@ const countries = feature(world, world.objects.countries).features;
 const HOME = { latitude: 47.3769, longitude: 8.5417 };
 const SOURCE_OPTIONS = [
   ["auto", "Auto"],
-  ["cscli", "cscli"],
   ["lapi-alerts", "LAPI alerts"],
   ["lapi-decisions", "LAPI decisions"],
+  ["cscli", "cscli"],
   ["sample", "Sample"]
 ];
+const REFRESH_OPTIONS = [
+  [30, "30s"],
+  [60, "1min"],
+  [300, "5min"],
+  [1800, "30min"]
+];
+const REFRESH_STORAGE_KEY = "crowdsec-map-refresh-seconds";
 const MAX_MAP_POINTS = 180;
 const MAX_SIGNAL_PATHS = 30;
+const MAX_TIMELINE_COLUMNS = 9;
+const MAX_TIMELINE_ROWS = 3;
+const TIMELINE_MIN_CARD_WIDTH = 132;
+const TIMELINE_GAP = 10;
+const RANK_MODES = [
+  ["countries", "Countries"],
+  ["ips", "IPs"],
+  ["scenarios", "Scenarios"]
+];
+const EMPTY_RANK_ITEMS = [];
+const RANK_MODE_STORAGE_PREFIX = "crowdsec-map-rank-mode";
+const TIMELINE_ROWS_STORAGE_KEY = "crowdsec-map-timeline-rows";
 
 function App() {
   const [source, setSource] = useState("auto");
+  const [refreshSeconds, setRefreshSeconds] = useState(readStoredRefreshSeconds);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -45,9 +65,13 @@ function App() {
   }, [loadData]);
 
   useEffect(() => {
-    const interval = window.setInterval(loadData, (data?.refreshSeconds || 30) * 1000);
+    window.localStorage.setItem(REFRESH_STORAGE_KEY, String(refreshSeconds));
+  }, [refreshSeconds]);
+
+  useEffect(() => {
+    const interval = window.setInterval(loadData, refreshSeconds * 1000);
     return () => window.clearInterval(interval);
-  }, [data?.refreshSeconds, loadData]);
+  }, [refreshSeconds, loadData]);
 
   const attacks = data?.alerts || [];
   const totals = data?.totals || {};
@@ -59,6 +83,8 @@ function App() {
         <Toolbar
           source={source}
           setSource={setSource}
+          refreshSeconds={refreshSeconds}
+          setRefreshSeconds={setRefreshSeconds}
           data={data}
           loading={loading}
           onRefresh={loadData}
@@ -72,6 +98,8 @@ function App() {
 }
 
 function Sidebar({ data, totals }) {
+  const rankings = useMemo(() => buildRankings(data?.alerts || []), [data?.alerts]);
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -89,8 +117,8 @@ function Sidebar({ data, totals }) {
         <Metric icon={<ShieldAlert />} label="Decisions" value={totals.bans || 0} />
       </div>
 
-      <Panel title="Countries" items={data?.topCountries || []} />
-      <Panel title="Scenarios" items={data?.topScenarios || []} wide />
+      <Panel rankings={rankings} initialMode="countries" storageKey="top" />
+      <Panel rankings={rankings} initialMode="scenarios" storageKey="bottom" wide />
 
     </aside>
   );
@@ -106,16 +134,107 @@ function Metric({ icon, label, value }) {
   );
 }
 
-function Panel({ title, items, wide = false }) {
+function Panel({ rankings, initialMode, storageKey, wide = false }) {
+  const [mode, setMode] = useState(() => readStoredRankMode(storageKey, initialMode));
+  const [expanded, setExpanded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(Number.POSITIVE_INFINITY);
+  const panelRef = useRef(null);
+  const headerRef = useRef(null);
+  const measureRef = useRef(null);
+  const items = rankings[mode] || EMPTY_RANK_ITEMS;
   const max = Math.max(...items.map((item) => item.count), 1);
+  const hasMeasuredLimit = Number.isFinite(visibleCount);
+  const collapsedLimit = hasMeasuredLimit ? Math.max(1, visibleCount) : items.length;
+  const visibleItems = expanded ? items : items.slice(0, collapsedLimit);
+  const hasMore = items.length > collapsedLimit;
+
+  useLayoutEffect(() => {
+    setExpanded(false);
+  }, [mode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(`${RANK_MODE_STORAGE_PREFIX}:${storageKey}`, mode);
+  }, [mode, storageKey]);
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const header = headerRef.current;
+    const measure = measureRef.current;
+    if (!panel || !header || !measure) {
+      return undefined;
+    }
+
+    const updateVisibleCount = () => {
+      const rows = [...measure.querySelectorAll(".rankRow")];
+      if (rows.length === 0) {
+        setVisibleCount(Number.POSITIVE_INFINITY);
+        return;
+      }
+
+      const panelStyles = window.getComputedStyle(panel);
+      const listStyles = window.getComputedStyle(measure);
+      const panelPadding = parseFloat(panelStyles.paddingTop) + parseFloat(panelStyles.paddingBottom);
+      const listGap = parseFloat(listStyles.rowGap || listStyles.gap || 0);
+      const headerBottom = header.offsetHeight + parseFloat(window.getComputedStyle(header).marginBottom || 0);
+      const rowHeight = Math.max(...rows.map((row) => row.offsetHeight));
+      const available = panel.clientHeight - panelPadding - headerBottom - 30;
+      const possible = Math.floor((available + listGap) / (rowHeight + listGap));
+
+      if (rows.length * rowHeight + Math.max(0, rows.length - 1) * listGap <= available) {
+        setVisibleCount(Number.POSITIVE_INFINITY);
+        return;
+      }
+
+      setVisibleCount(Math.max(1, possible));
+    };
+
+    updateVisibleCount();
+    const observer = new ResizeObserver(updateVisibleCount);
+    observer.observe(panel);
+    observer.observe(measure);
+    return () => observer.disconnect();
+  }, [items]);
+
   return (
-    <section className={wide ? "panel panelWide" : "panel"}>
-      <h2>{title}</h2>
+    <section className={wide ? "panel panelWide" : "panel"} ref={panelRef}>
+      <div className="panelHeader" ref={headerRef}>
+        <div className="rankSwitch" role="group" aria-label="Ranking mode">
+          {RANK_MODES.map(([value, label]) => (
+            <button
+              type="button"
+              className={mode === value ? "active" : ""}
+              key={value}
+              onClick={() => setMode(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="rankList">
         {items.length === 0 && <p className="empty">No data yet</p>}
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <div className="rankRow" key={item.label}>
             <span title={item.label}>{item.label}</span>
+            <div className="bar"><i style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} /></div>
+            <strong>{item.count}</strong>
+          </div>
+        ))}
+      </div>
+      {!expanded && hasMore && (
+        <button
+          type="button"
+          className="rankMore"
+          onClick={() => setExpanded(true)}
+          title="Show all"
+        >
+          ...
+        </button>
+      )}
+      <div className="rankList rankMeasure" ref={measureRef} aria-hidden="true">
+        {items.map((item) => (
+          <div className="rankRow" key={`${item.label}-measure`}>
+            <span>{item.label}</span>
             <div className="bar"><i style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }} /></div>
             <strong>{item.count}</strong>
           </div>
@@ -125,7 +244,11 @@ function Panel({ title, items, wide = false }) {
   );
 }
 
-function Toolbar({ source, setSource, data, loading, onRefresh }) {
+function Toolbar({ source, setSource, refreshSeconds, setRefreshSeconds, data, loading, onRefresh }) {
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const [intervalOpen, setIntervalOpen] = useState(false);
+  const displayedSource = data?.source || source || "...";
+
   return (
     <header className="toolbar">
       <div>
@@ -137,17 +260,75 @@ function Toolbar({ source, setSource, data, loading, onRefresh }) {
       </div>
       <div className="toolbarControls">
         <div className="toolbarStatus">
-          <span>Source <strong>{data?.source || "..."}</strong></span>
-          <span><Timer size={13} /> {data?.refreshSeconds || 30}s</span>
+          <div className="toolbarMenuWrap">
+            <span>Source</span>
+            <button
+              type="button"
+              className="toolbarMenuTrigger sourceTrigger"
+              onClick={() => {
+                setSourceOpen((value) => !value);
+                setIntervalOpen(false);
+              }}
+              aria-expanded={sourceOpen}
+              aria-haspopup="menu"
+              title="Data source"
+            >
+              <strong>{displayedSource}</strong>
+            </button>
+            {sourceOpen && (
+              <div className="toolbarMenu sourceMenu" role="menu">
+                {SOURCE_OPTIONS.map(([value, label]) => (
+                  <button
+                    type="button"
+                    className={source === value ? "active" : ""}
+                    key={value}
+                    onClick={() => {
+                      setSource(value);
+                      setSourceOpen(false);
+                    }}
+                    role="menuitem"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="toolbarMenuWrap">
+            <span>Intervall</span>
+            <button
+              type="button"
+              className="toolbarMenuTrigger intervalTrigger"
+              onClick={() => {
+                setIntervalOpen((value) => !value);
+                setSourceOpen(false);
+              }}
+              aria-expanded={intervalOpen}
+              aria-haspopup="menu"
+              title="Refresh interval"
+            >
+              <Timer size={13} /> <strong>{formatRefreshInterval(refreshSeconds)}</strong>
+            </button>
+            {intervalOpen && (
+              <div className="toolbarMenu intervalMenu" role="menu">
+                {REFRESH_OPTIONS.map(([value, label]) => (
+                  <button
+                    type="button"
+                    className={refreshSeconds === value ? "active" : ""}
+                    key={value}
+                    onClick={() => {
+                      setRefreshSeconds(value);
+                      setIntervalOpen(false);
+                    }}
+                    role="menuitem"
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <label>
-          <span>Source</span>
-          <select value={source} onChange={(event) => setSource(event.target.value)}>
-            {SOURCE_OPTIONS.map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
         <button type="button" onClick={onRefresh} disabled={loading} title="Refresh" aria-label="Refresh">
           <RefreshCcw size={17} className={loading ? "spin" : ""} />
         </button>
@@ -182,8 +363,8 @@ function WorldMap({ attacks }) {
           </radialGradient>
         </defs>
         <path className="sphere" d={path({ type: "Sphere" })} />
-        {countries.map((country) => (
-          <path key={country.id} className="country" d={path(country)} />
+        {countries.map((country, index) => (
+          <path key={`${country.id || "country"}-${index}`} className="country" d={path(country)} />
         ))}
         {activePaths.map((attack) => (
           <path
@@ -295,22 +476,197 @@ function AgeLegend() {
 }
 
 function Timeline({ attacks, error }) {
-  const recent = [...attacks]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 9);
+  const recent = useMemo(() => compactTimelineAttacks(attacks), [attacks]);
+  const [visibleRows, setVisibleRows] = useState(readStoredTimelineRows);
+  const [visibleColumns, setVisibleColumns] = useState(MAX_TIMELINE_COLUMNS);
+  const timelineRef = useRef(null);
+  const availableRows = recent.length > 0
+    ? Math.max(1, Math.min(MAX_TIMELINE_ROWS, Math.ceil(recent.length / visibleColumns)))
+    : visibleRows;
+  const safeVisibleRows = Math.min(visibleRows, availableRows);
+  const visibleLimit = visibleColumns * safeVisibleRows;
+  const visibleItems = recent.slice(0, visibleLimit);
+  const canExpand = recent.length > visibleLimit && safeVisibleRows < MAX_TIMELINE_ROWS;
+  const canCollapse = safeVisibleRows > 1;
+
+  useLayoutEffect(() => {
+    const timeline = timelineRef.current;
+    if (!timeline) {
+      return undefined;
+    }
+
+    const updateVisibleColumns = () => {
+      const rect = timeline.getBoundingClientRect();
+      const availableWidth = Math.max(0, Math.min(timeline.clientWidth, window.innerWidth - rect.left));
+      const columns = Math.floor((availableWidth + TIMELINE_GAP) / (TIMELINE_MIN_CARD_WIDTH + TIMELINE_GAP));
+      setVisibleColumns(Math.max(1, Math.min(MAX_TIMELINE_COLUMNS, columns)));
+    };
+
+    updateVisibleColumns();
+    const observer = new ResizeObserver(updateVisibleColumns);
+    observer.observe(timeline);
+    window.addEventListener("resize", updateVisibleColumns);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateVisibleColumns);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (visibleRows !== safeVisibleRows) {
+      setVisibleRows(safeVisibleRows);
+    }
+  }, [safeVisibleRows, visibleRows]);
+
+  useEffect(() => {
+    window.localStorage.setItem(TIMELINE_ROWS_STORAGE_KEY, String(safeVisibleRows));
+  }, [safeVisibleRows]);
 
   return (
-    <footer className="timeline">
-      {error && <div className="warning">{error}</div>}
-      {recent.map((attack) => (
-        <article className={getAgeClass(attack.createdAt)} key={`${attack.id}-timeline`}>
-          <span>{formatTime(attack.createdAt)}</span>
-          <strong>{attack.country}</strong>
-          <p>{attack.scenario}</p>
-        </article>
-      ))}
-    </footer>
+    <div className={`timelineDock ${(canExpand || canCollapse) ? "hasTimelineControls" : ""}`}>
+      <footer
+        className={`timeline timelineRows${safeVisibleRows}`}
+        ref={timelineRef}
+        style={{ "--timeline-columns": visibleColumns }}
+      >
+        {error && <div className="warning">{error}</div>}
+        {visibleItems.map((attack) => (
+          <article className={getAgeClass(attack.createdAt)} key={`${attack.id}-timeline`}>
+            <span>{formatTime(attack.createdAt)}</span>
+            <strong title={attack.ip}>{attack.ip || "unknown"}</strong>
+            <p title={attack.scenario}>
+              {attack.country} · {attack.totalCount} alert{attack.totalCount === 1 ? "" : "s"} · {attack.scenario}
+            </p>
+          </article>
+        ))}
+      </footer>
+      {(canExpand || canCollapse) && (
+        <div className="timelineControls" aria-label="Timeline rows">
+          <button
+            type="button"
+            onClick={() => setVisibleRows((rows) => Math.min(MAX_TIMELINE_ROWS, rows + 1))}
+            disabled={!canExpand}
+            title="Show more timeline rows"
+            aria-label="Show more timeline rows"
+          >
+            <ChevronUp size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setVisibleRows((rows) => Math.max(1, rows - 1))}
+            disabled={!canCollapse}
+            title="Show fewer timeline rows"
+            aria-label="Show fewer timeline rows"
+          >
+            <ChevronDown size={16} />
+          </button>
+        </div>
+      )}
+    </div>
   );
+}
+
+function buildRankings(attacks) {
+  return {
+    countries: groupCounts(attacks, "country"),
+    ips: groupCounts(attacks, "ip"),
+    scenarios: groupCounts(attacks, "scenario")
+  };
+}
+
+function groupCounts(items, field) {
+  const counts = new Map();
+  for (const item of items) {
+    const key = item[field] || "unknown";
+    counts.set(key, (counts.get(key) || 0) + Number(item.count || 1));
+  }
+  return [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.label.localeCompare(b.label);
+    });
+}
+
+function compactTimelineAttacks(attacks) {
+  const groups = new Map();
+
+  for (const attack of attacks) {
+    const minute = getMinuteKey(attack.createdAt);
+    const ip = attack.ip || "unknown";
+    const key = `${ip}|${minute}`;
+    const count = Number(attack.count || 1);
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.totalCount += count;
+      existing.scenarioCounts.set(attack.scenario, (existing.scenarioCounts.get(attack.scenario) || 0) + count);
+      if (new Date(attack.createdAt) > new Date(existing.createdAt)) {
+        existing.createdAt = attack.createdAt;
+        existing.country = attack.country || existing.country;
+      }
+      existing.scenario = getTopScenario(existing.scenarioCounts);
+      continue;
+    }
+
+    groups.set(key, {
+      ...attack,
+      id: `timeline-${key}`,
+      ip,
+      totalCount: count,
+      scenarioCounts: new Map([[attack.scenario, count]])
+    });
+  }
+
+  return [...groups.values()]
+    .map(({ scenarioCounts, ...attack }) => ({
+      ...attack,
+      scenario: getTopScenario(scenarioCounts)
+    }))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, MAX_TIMELINE_COLUMNS * MAX_TIMELINE_ROWS);
+}
+
+function getMinuteKey(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "unknown";
+  }
+  date.setSeconds(0, 0);
+  return date.toISOString();
+}
+
+function getTopScenario(counts) {
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "unknown";
+}
+
+function readStoredRankMode(storageKey, fallback) {
+  try {
+    const stored = window.localStorage.getItem(`${RANK_MODE_STORAGE_PREFIX}:${storageKey}`);
+    return RANK_MODES.some(([value]) => value === stored) ? stored : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readStoredTimelineRows() {
+  try {
+    const stored = Number(window.localStorage.getItem(TIMELINE_ROWS_STORAGE_KEY));
+    return Number.isInteger(stored) ? Math.max(1, Math.min(MAX_TIMELINE_ROWS, stored)) : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function readStoredRefreshSeconds() {
+  try {
+    const stored = Number(window.localStorage.getItem(REFRESH_STORAGE_KEY));
+    return REFRESH_OPTIONS.some(([value]) => value === stored) ? stored : 30;
+  } catch {
+    return 30;
+  }
 }
 
 function formatTime(value) {
@@ -322,6 +678,13 @@ function formatTime(value) {
     minute: "2-digit",
     second: "2-digit"
   }).format(new Date(value));
+}
+
+function formatRefreshInterval(seconds) {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  return `${seconds / 60}min`;
 }
 
 createRoot(document.getElementById("root")).render(<App />);

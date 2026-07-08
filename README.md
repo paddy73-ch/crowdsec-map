@@ -16,7 +16,15 @@ http://192.168.192.101:8088
 
 ## Datenquellen
 
-Die App kann mehrere Quellen lesen. Im UI kannst du zwischen `Auto`, `cscli`, `LAPI alerts`, `LAPI decisions` und `Sample` wechseln.
+Die App kann mehrere Quellen lesen. Im UI kannst du zwischen `Auto`, `LAPI alerts`, `LAPI decisions`, `cscli` und `Sample` wechseln.
+
+## Bedienung im Dashboard
+
+- `Source` ist direkt in der Toolbar auswählbar.
+- `Intervall` ist direkt in der Toolbar auswählbar: `30s`, `1min`, `5min`, `30min`.
+- Die Intervall-Auswahl, die Ranking-Umschalter und die Anzahl der Timeline-Zeilen bleiben nach einem Seiten-Refresh im Browser erhalten.
+- Die Ranking-Panels können zwischen `Countries`, `IPs` und `Scenarios` umgeschaltet werden.
+- Die Timeline gruppiert Alerts nach Quell-IP und Minute. Bei mehr Einträgen kann die Timeline auf bis zu drei Zeilen erweitert werden.
 
 ### Variante A: `cscli` per bestehendem CrowdSec-Container
 
