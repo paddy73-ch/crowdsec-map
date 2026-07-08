@@ -1,36 +1,40 @@
+![CrowdSec Map social preview](.github/social-preview.png)
+
 # CrowdSec Map
 
-Kleine Docker-Web-App, die CrowdSec-Alerts oder Decisions aggregiert und auf einer Weltkarte darstellt.
+CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decisions on a live world map. It shows attack origins, active bans, countries, source IPs, scenarios, and a compact timeline for recent activity.
 
-## Schnellstart
+## Quick Start
+
+For local builds or the existing Proxmox/LXC deployment:
 
 ```bash
 docker compose up -d --build
 ```
 
-Danach im Browser öffnen:
+Open the dashboard:
 
 ```text
 http://192.168.192.101:8088
 ```
 
-## Datenquellen
+## Data Sources
 
-Die App kann mehrere Quellen lesen. Im UI kannst du zwischen `Auto`, `LAPI alerts`, `LAPI decisions`, `cscli` und `Sample` wechseln.
+The app can read multiple CrowdSec sources. In the UI, switch between `Auto`, `LAPI alerts`, `LAPI decisions`, `cscli`, and `Sample`.
 
-## Bedienung im Dashboard
+## Dashboard Features
 
-- `Source` ist direkt in der Toolbar auswählbar.
-- `Intervall` ist direkt in der Toolbar auswählbar: `30s`, `1min`, `5min`, `30min`.
-- Die Intervall-Auswahl, die Ranking-Umschalter und die Anzahl der Timeline-Zeilen bleiben nach einem Seiten-Refresh im Browser erhalten.
-- Links oben zeigt `Active Bans` die aktuell aktiven CrowdSec-Ban-Decisions.
-- Die Ranking-Panels können zwischen `Countries`, `IPs`, `Scenarios` und `Bans` umgeschaltet werden.
-- `Bans` listet die aktiv gebannten IPs mit ihrer Restlaufzeit.
-- Die Timeline gruppiert Alerts nach Quell-IP und Minute. Bei mehr Einträgen kann die Timeline auf bis zu drei Zeilen erweitert werden.
+- Toolbar source selection.
+- Toolbar refresh interval selection: `30s`, `1min`, `5min`, `30min`.
+- Browser-persisted interval, ranking panel selections, and timeline row count.
+- `Active Bans` metric in the top-left summary area.
+- Ranking panels for `Countries`, `IPs`, `Scenarios`, and `Bans`.
+- Active banned IP list with remaining ban duration.
+- Timeline grouped by source IP and minute, expandable up to three rows.
 
-### Variante A: `cscli` per bestehendem CrowdSec-Container
+## Source Option A: `cscli` From an Existing CrowdSec Container
 
-Das ist die einfachste Variante, wenn dein CrowdSec-Container bereits `cscli alerts list -o json` kann. In `docker-compose.yml` muss der Containername passen:
+This is the simplest option if your CrowdSec container can already run `cscli alerts list -o json`. Set the container name in `docker-compose.yml`:
 
 ```yaml
 environment:
@@ -41,83 +45,95 @@ volumes:
   - /var/run/docker.sock:/var/run/docker.sock:ro
 ```
 
-Prüfen:
+Check the command manually:
 
 ```bash
 docker exec crowdsec cscli alerts list -o json --limit 5
 ```
 
-### Variante B: LAPI Alerts
+## Source Option B: LAPI Alerts
 
-Alerts sind für die Karte ideal, weil CrowdSec darin häufig `source.latitude`, `source.longitude`, `source.cn` und `source.as_name` liefert.
+Alerts are ideal for the map because CrowdSec often includes `source.latitude`, `source.longitude`, `source.cn`, and `source.as_name`.
 
-1. In CrowdSec eine Machine für die Map registrieren.
-2. Machine in CrowdSec validieren.
-3. `LAPI_URL`, `LAPI_LOGIN` und `LAPI_PASSWORD` setzen.
+1. Register a machine for CrowdSec Map.
+2. Validate the machine in CrowdSec.
+3. Set `LAPI_URL`, `LAPI_LOGIN`, and `LAPI_PASSWORD`.
 
-Beispiel:
+Example:
 
 ```yaml
 environment:
   DATA_SOURCE: "lapi-alerts"
   LAPI_URL: "http://crowdsec:8080"
   LAPI_LOGIN: "crowdsec-map"
-  LAPI_PASSWORD: "dein-passwort"
+  LAPI_PASSWORD: "your-password"
 ```
 
-### Variante C: LAPI Decisions
+## Source Option C: LAPI Decisions
 
-Diese Variante nutzt einen Bouncer-Key gegen `/v1/decisions`. Sie ist gut für aktuelle Bans, enthält aber je nach CrowdSec-Daten weniger Kontext als Alerts.
+This option uses a bouncer key against `/v1/decisions`. It works well for current bans, but depending on your CrowdSec data it may include less context than alerts.
 
 ```yaml
 environment:
   DATA_SOURCE: "lapi-decisions"
   LAPI_URL: "http://crowdsec:8080"
-  LAPI_API_KEY: "dein-bouncer-key"
+  LAPI_API_KEY: "your-bouncer-key"
 ```
 
-## Wichtige Umgebungsvariablen
+## Environment Variables
 
-| Variable | Zweck |
+| Variable | Purpose |
 | --- | --- |
-| `PORT` | Web/API-Port im Container, Standard `8088` |
+| `PORT` | Web/API port inside the container, default `8088` |
 | `DATA_SOURCE` | `auto`, `cscli`, `lapi-alerts`, `lapi-decisions`, `sample` |
-| `REFRESH_SECONDS` | Auto-Refresh-Intervall |
-| `CROWDSEC_CONTAINER` | Docker-Containername für `docker exec ... cscli` |
-| `CSCLI_COMMAND` | Auszuführender `cscli`-Befehl |
+| `REFRESH_SECONDS` | Default auto-refresh interval |
+| `CROWDSEC_CONTAINER` | Docker container name for `docker exec ... cscli` |
+| `CSCLI_COMMAND` | Command executed inside the CrowdSec container |
 | `LAPI_URL` | CrowdSec LAPI URL |
-| `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/Machine-Credentials für Alerts |
-| `LAPI_API_KEY` | Bouncer-Key für Decisions |
+| `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/machine credentials for alerts |
+| `LAPI_API_KEY` | Bouncer key for decisions |
 
-## Docker Image, Unraid und Home Assistant
+## Docker Image, Unraid, and Home Assistant
 
-Das bestehende `docker-compose.yml` bleibt bewusst build-basiert und ist der sichere Weg fuer den aktuellen Container auf `.101`.
+The existing `docker-compose.yml` intentionally stays build-based. This keeps the current `.101` deployment path simple and safe.
 
-Zusaetzlich gibt es eine optionale Image-Variante:
+An optional published image setup is available:
 
 ```bash
 docker compose -f docker-compose.image.yml up -d
 ```
 
-Das Image wird ueber GitHub Actions als `ghcr.io/paddy73-ch/crowdsec-map:latest` gebaut, sobald Aenderungen nach `main` gepusht werden.
+GitHub Actions builds the image as:
 
-- Unraid: siehe [docs/unraid.md](docs/unraid.md) und [packaging/unraid/crowdsec-map.xml](packaging/unraid/crowdsec-map.xml)
-- Home Assistant: siehe [docs/home-assistant.md](docs/home-assistant.md)
-- Generisches Docker Compose mit Image: siehe [docker-compose.image.yml](docker-compose.image.yml)
+```text
+ghcr.io/paddy73-ch/crowdsec-map:latest
+```
 
-## Lokale Entwicklung
+- Unraid: see [docs/unraid.md](docs/unraid.md) and [packaging/unraid/crowdsec-map.xml](packaging/unraid/crowdsec-map.xml)
+- Home Assistant: see [docs/home-assistant.md](docs/home-assistant.md)
+- Generic Docker Compose image setup: see [docker-compose.image.yml](docker-compose.image.yml)
+
+## Local Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+Frontend:
 
-Backend: `http://localhost:8088/api/attacks`
+```text
+http://localhost:5173
+```
 
-## Hinweise
+Backend:
 
-- Wenn CrowdSec keine Koordinaten mitliefert, versucht die App eine GeoIP-Auflösung über `geoip-lite`.
-- Wenn `DATA_SOURCE=auto` keine echte Quelle erreicht, zeigt die App Sample-Daten und eine Warnung in der Timeline.
-- Für `cscli` aus einem separaten Container braucht die App Zugriff auf den Docker-Socket. Wenn du das vermeiden willst, nutze LAPI.
+```text
+http://localhost:8088/api/attacks
+```
+
+## Notes
+
+- If CrowdSec does not provide coordinates, the app tries to resolve locations with `geoip-lite`.
+- If `DATA_SOURCE=auto` cannot reach a real source, the app falls back to sample data and shows a warning in the timeline.
+- Using `cscli` from a separate container requires Docker socket access. Use LAPI if you want to avoid mounting the Docker socket.
