@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, ChevronDown, ChevronUp, Crosshair, Globe2, RefreshCcw, ShieldAlert, Timer } from "lucide-react";
+import { Activity, BarChart3, ChevronDown, ChevronUp, Crosshair, Globe2, Map as MapIcon, Moon, RefreshCcw, ShieldAlert, Sun, Timer } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -37,10 +37,21 @@ const RANK_MODES = [
 const EMPTY_RANK_ITEMS = [];
 const RANK_MODE_STORAGE_PREFIX = "crowdsec-map-rank-mode";
 const TIMELINE_ROWS_STORAGE_KEY = "crowdsec-map-timeline-rows";
+const THEME_STORAGE_KEY = "crowdsec-map-theme";
+const HISTORY_DAYS_OPTIONS = [7, 30, 90];
+const HISTORY_GROUP_OPTIONS = [
+  ["cidr24", "CIDR /24"],
+  ["asn", "ASN"],
+  ["ip", "IP"],
+  ["scenario", "Scenario"],
+  ["country", "Country"]
+];
 
 function App() {
   const [source, setSource] = useState("auto");
   const [refreshSeconds, setRefreshSeconds] = useState(readStoredRefreshSeconds);
+  const [theme, setTheme] = useState(readStoredTheme);
+  const [view, setView] = useState("live");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,6 +81,10 @@ function App() {
   }, [refreshSeconds]);
 
   useEffect(() => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
     const interval = window.setInterval(loadData, refreshSeconds * 1000);
     return () => window.clearInterval(interval);
   }, [refreshSeconds, loadData]);
@@ -78,10 +93,14 @@ function App() {
   const totals = data?.totals || {};
 
   return (
-    <main className="appShell">
+    <main className={`appShell theme${theme === "light" ? "Light" : "Dark"}`}>
       <Sidebar data={data} totals={totals} />
       <section className="mapStage">
         <Toolbar
+          view={view}
+          setView={setView}
+          theme={theme}
+          setTheme={setTheme}
           source={source}
           setSource={setSource}
           refreshSeconds={refreshSeconds}
@@ -90,9 +109,15 @@ function App() {
           loading={loading}
           onRefresh={loadData}
         />
-        <WorldMap attacks={attacks} />
-        <AgeLegend />
-        <Timeline attacks={attacks} error={error || data?.warning} />
+        {view === "live" ? (
+          <>
+            <WorldMap attacks={attacks} />
+            <AgeLegend />
+            <Timeline attacks={attacks} error={error || data?.warning} />
+          </>
+        ) : (
+          <HistoryView />
+        )}
       </section>
     </main>
   );
@@ -244,7 +269,7 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
   );
 }
 
-function Toolbar({ source, setSource, refreshSeconds, setRefreshSeconds, data, loading, onRefresh }) {
+function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSeconds, setRefreshSeconds, data, loading, onRefresh }) {
   const [sourceOpen, setSourceOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
   const displayedSource = data?.source || source || "...";
@@ -253,12 +278,30 @@ function Toolbar({ source, setSource, refreshSeconds, setRefreshSeconds, data, l
     <header className="toolbar">
       <div>
         <div className="titleLine">
-          <h2>Live attacks</h2>
+          <h2>{view === "live" ? "Live attacks" : "History"}</h2>
           {data?.publicTargetIp && <span>{data.publicTargetIp}</span>}
         </div>
-        <p>Last update {formatTime(data?.generatedAt)}</p>
+        <p>{view === "live" ? "Last update" : "Repeated sources"} {formatTime(data?.generatedAt)}</p>
       </div>
       <div className="toolbarControls">
+        <div className="viewSwitch" role="group" aria-label="Dashboard view">
+          <button
+            type="button"
+            className={view === "live" ? "active" : ""}
+            onClick={() => setView("live")}
+            title="Live map"
+          >
+            <MapIcon size={15} /> Live
+          </button>
+          <button
+            type="button"
+            className={view === "history" ? "active" : ""}
+            onClick={() => setView("history")}
+            title="History analysis"
+          >
+            <BarChart3 size={15} /> History
+          </button>
+        </div>
         <div className="toolbarStatus">
           <div className="toolbarMenuWrap">
             <span>Source</span>
@@ -332,8 +375,128 @@ function Toolbar({ source, setSource, refreshSeconds, setRefreshSeconds, data, l
         <button type="button" onClick={onRefresh} disabled={loading} title="Refresh" aria-label="Refresh">
           <RefreshCcw size={17} className={loading ? "spin" : ""} />
         </button>
+        <button
+          type="button"
+          onClick={() => setTheme((value) => value === "dark" ? "light" : "dark")}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+        </button>
       </div>
     </header>
+  );
+}
+
+function HistoryView() {
+  const [days, setDays] = useState(30);
+  const [groupBy, setGroupBy] = useState("cidr24");
+  const [history, setHistory] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadHistory = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ days: String(days), groupBy });
+      const response = await fetch(`/api/history?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      setHistory(await response.json());
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [days, groupBy]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  const maxAlerts = Math.max(...(history?.items || []).map((item) => item.alerts), 1);
+
+  return (
+    <section className="historyView">
+      <div className="historyControls">
+        <div className="segmented" role="group" aria-label="History time range">
+          {HISTORY_DAYS_OPTIONS.map((value) => (
+            <button
+              type="button"
+              className={days === value ? "active" : ""}
+              key={value}
+              onClick={() => setDays(value)}
+            >
+              {value}d
+            </button>
+          ))}
+        </div>
+        <div className="segmented wide" role="group" aria-label="History grouping">
+          {HISTORY_GROUP_OPTIONS.map(([value, label]) => (
+            <button
+              type="button"
+              className={groupBy === value ? "active" : ""}
+              key={value}
+              onClick={() => setGroupBy(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="historyRefresh" onClick={loadHistory} disabled={loading} title="Refresh history">
+          <RefreshCcw size={16} className={loading ? "spin" : ""} />
+        </button>
+      </div>
+
+      <div className="historySummary">
+        <Metric icon={<BarChart3 />} label="Groups" value={history?.items?.length || 0} />
+        <Metric icon={<Activity />} label="Events" value={history?.matchedEvents || 0} />
+        <Metric icon={<Timer />} label="Window" value={`${history?.days || days}d`} />
+      </div>
+
+      <div className="historyTableWrap">
+        {error && <div className="warning">{error}</div>}
+        {!error && history?.items?.length === 0 && (
+          <div className="historyEmpty">
+            <strong>No history yet</strong>
+            <span>History starts filling when live data is refreshed.</span>
+          </div>
+        )}
+        {history?.items?.length > 0 && (
+          <table className="historyTable">
+            <thead>
+              <tr>
+                <th>{getHistoryGroupLabel(groupBy)}</th>
+                <th>Days</th>
+                <th>Alerts</th>
+                <th>IPs</th>
+                <th>Last seen</th>
+                <th>Top scenario</th>
+                <th>Country</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.items.map((item) => (
+                <tr key={item.label}>
+                  <td>
+                    <strong title={item.label}>{item.label}</strong>
+                    <div className="historyBar"><i style={{ width: `${Math.max(4, (item.alerts / maxAlerts) * 100)}%` }} /></div>
+                  </td>
+                  <td>{item.daysSeen}/{history.days}</td>
+                  <td>{item.alerts}</td>
+                  <td>{item.ipCount}</td>
+                  <td title={item.lastSeen}>{formatRelativeTime(item.lastSeen)}</td>
+                  <td title={item.topScenario}>{item.topScenario}</td>
+                  <td>{item.topCountry}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -675,6 +838,14 @@ function readStoredRefreshSeconds() {
   }
 }
 
+function readStoredTheme() {
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark";
+  } catch {
+    return "dark";
+  }
+}
+
 function formatTime(value) {
   if (!value) {
     return "...";
@@ -691,6 +862,27 @@ function formatRefreshInterval(seconds) {
     return `${seconds}s`;
   }
   return `${seconds / 60}min`;
+}
+
+function getHistoryGroupLabel(groupBy) {
+  return HISTORY_GROUP_OPTIONS.find(([value]) => value === groupBy)?.[1] || "Group";
+}
+
+function formatRelativeTime(value) {
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) {
+    return "...";
+  }
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 48) {
+    return `${diffHours}h ago`;
+  }
+  return `${Math.round(diffHours / 24)}d ago`;
 }
 
 createRoot(document.getElementById("root")).render(<App />);

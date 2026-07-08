@@ -16,5 +16,11 @@ services:
       LAPI_PASSWORD: "${LAPI_PASSWORD:-}"
       LAPI_API_KEY: "${LAPI_API_KEY:-}"
       PUBLIC_TARGET_IP: "${PUBLIC_TARGET_IP:-}"
+      HISTORY_FILE: "/app/data/history.jsonl"
+      HISTORY_RETENTION_DAYS: "90"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - crowdsec-map-data:/app/data
+
+volumes:
+  crowdsec-map-data:

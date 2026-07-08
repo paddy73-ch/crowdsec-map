@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { config } from "./config.js";
+import { readHistorySummary, recordHistory } from "./history.js";
 import { groupCounts } from "./normalize.js";
 import { readActiveBans, readCrowdSecData } from "./sources.js";
 
@@ -28,6 +29,8 @@ app.get("/api/attacks", async (request, response) => {
     activeBansWarning = `active-bans: ${error.message}`;
   }
 
+  await recordHistory(data.alerts);
+
   response.json({
     ...data,
     activeBans,
@@ -41,6 +44,13 @@ app.get("/api/attacks", async (request, response) => {
     topCountries: groupCounts(data.alerts, "country"),
     topScenarios: groupCounts(data.alerts, "scenario")
   });
+});
+
+app.get("/api/history", async (request, response) => {
+  response.json(await readHistorySummary({
+    days: request.query.days,
+    groupBy: request.query.groupBy
+  }));
 });
 
 const staticRoot = path.resolve(__dirname, "..", config.staticDir);

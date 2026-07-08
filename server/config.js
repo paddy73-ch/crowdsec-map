@@ -10,6 +10,8 @@ export const config = {
   lapiApiKey: process.env.LAPI_API_KEY || "",
   lapiLimit: Number(process.env.LAPI_LIMIT || 250),
   publicTargetIp: process.env.PUBLIC_TARGET_IP || "",
+  historyFile: process.env.HISTORY_FILE || "data/history.jsonl",
+  historyRetentionDays: Number(process.env.HISTORY_RETENTION_DAYS || 90),
   staticDir: process.env.STATIC_DIR || "dist"
 };
 

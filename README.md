@@ -92,6 +92,8 @@ environment:
 | `LAPI_URL` | CrowdSec LAPI URL |
 | `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/machine credentials for alerts |
 | `LAPI_API_KEY` | Bouncer key for decisions |
+| `HISTORY_FILE` | Persistent JSONL history file, default `data/history.jsonl` |
+| `HISTORY_RETENTION_DAYS` | History retention window, default `90` |
 
 ## Docker Image, Unraid, and Home Assistant
 

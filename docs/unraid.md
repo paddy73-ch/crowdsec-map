@@ -18,6 +18,9 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 ## Important settings
 
 - `WebUI`: `http://[IP]:[PORT:8088]`
+- `Appdata`: `/mnt/user/appdata/crowdsec-map` is mounted to `/app/data` for the History view.
+- `HISTORY_FILE`: `/app/data/history.jsonl`
+- `HISTORY_RETENTION_DAYS`: `90`
 - Docker socket mount is optional but required when using `cscli` via `CROWDSEC_CONTAINER`.
 - LAPI mode avoids Docker socket access and is preferred when you have watcher or bouncer credentials.
 
