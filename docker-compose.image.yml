@@ -1,0 +1,20 @@
+services:
+  crowdsec-map:
+    image: ghcr.io/paddy73-ch/crowdsec-map:latest
+    container_name: crowdsec-map
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: "8088"
+      DATA_SOURCE: "auto"
+      REFRESH_SECONDS: "30"
+      CROWDSEC_CONTAINER: "crowdsec"
+      CSCLI_COMMAND: "cscli alerts list -o json --limit 250"
+      LAPI_URL: "${LAPI_URL:-http://crowdsec:8080}"
+      LAPI_LOGIN: "${LAPI_LOGIN:-}"
+      LAPI_PASSWORD: "${LAPI_PASSWORD:-}"
+      LAPI_API_KEY: "${LAPI_API_KEY:-}"
+      PUBLIC_TARGET_IP: "${PUBLIC_TARGET_IP:-}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro

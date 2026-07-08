@@ -89,6 +89,22 @@ environment:
 | `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/Machine-Credentials für Alerts |
 | `LAPI_API_KEY` | Bouncer-Key für Decisions |
 
+## Docker Image, Unraid und Home Assistant
+
+Das bestehende `docker-compose.yml` bleibt bewusst build-basiert und ist der sichere Weg fuer den aktuellen Container auf `.101`.
+
+Zusaetzlich gibt es eine optionale Image-Variante:
+
+```bash
+docker compose -f docker-compose.image.yml up -d
+```
+
+Das Image wird ueber GitHub Actions als `ghcr.io/paddy73-ch/crowdsec-map:latest` gebaut, sobald Aenderungen nach `main` gepusht werden.
+
+- Unraid: siehe [docs/unraid.md](docs/unraid.md) und [packaging/unraid/crowdsec-map.xml](packaging/unraid/crowdsec-map.xml)
+- Home Assistant: siehe [docs/home-assistant.md](docs/home-assistant.md)
+- Generisches Docker Compose mit Image: siehe [docker-compose.image.yml](docker-compose.image.yml)
+
 ## Lokale Entwicklung
 
 ```bash
