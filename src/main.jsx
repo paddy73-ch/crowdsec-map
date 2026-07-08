@@ -281,7 +281,7 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
       <div>
         <div className="titleLine">
           <h2>{view === "live" ? "Live attacks" : "History"}</h2>
-          {data?.publicTargetIp && <span>{data.publicTargetIp}</span>}
+          {data?.publicTargetIp && <span title={`Public target IP: ${data.publicTargetIpSource || "unknown"}`}>{data.publicTargetIp}</span>}
         </div>
         <p>{view === "live" ? "Last update" : "Repeated sources"} {formatTime(data?.generatedAt)}</p>
       </div>

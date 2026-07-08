@@ -5,22 +5,27 @@ import { config } from "./config.js";
 import { readIpReputation, readReputationStats } from "./cti.js";
 import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
 import { groupCounts } from "./normalize.js";
+import { readPublicTargetIp } from "./publicIp.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-app.get("/api/health", (_request, response) => {
+app.get("/api/health", async (_request, response) => {
+  const publicTargetIp = await readPublicTargetIp();
   response.json({
     ok: true,
     source: config.dataSource,
     refreshSeconds: config.refreshSeconds,
-    publicTargetIp: config.publicTargetIp
+    publicTargetIp: publicTargetIp.ip,
+    publicTargetIpSource: publicTargetIp.source,
+    publicTargetIpWarning: publicTargetIp.warning
   });
 });
 
 app.get("/api/attacks", async (request, response) => {
   const data = await readCrowdSecData(request.query.source || "auto");
+  const publicTargetIp = await readPublicTargetIp();
   let activeBans = [];
   let activeBansWarning = "";
 
@@ -36,8 +41,9 @@ app.get("/api/attacks", async (request, response) => {
     ...data,
     activeBans,
     refreshSeconds: config.refreshSeconds,
-    publicTargetIp: config.publicTargetIp,
-    warning: [data.warning, activeBansWarning].filter(Boolean).join(" | "),
+    publicTargetIp: publicTargetIp.ip,
+    publicTargetIpSource: publicTargetIp.source,
+    warning: [data.warning, activeBansWarning, publicTargetIp.warning && `public-ip: ${publicTargetIp.warning}`].filter(Boolean).join(" | "),
     totals: {
       ...data.totals,
       activeBans: activeBans.length

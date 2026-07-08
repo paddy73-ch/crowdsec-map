@@ -10,6 +10,8 @@ export const config = {
   lapiApiKey: process.env.LAPI_API_KEY || "",
   lapiLimit: Number(process.env.LAPI_LIMIT || 250),
   publicTargetIp: process.env.PUBLIC_TARGET_IP || "",
+  publicTargetIpAuto: parseBoolean(process.env.PUBLIC_TARGET_IP_AUTO, true),
+  publicTargetIpRefreshMinutes: Number(process.env.PUBLIC_TARGET_IP_REFRESH_MINUTES || 60),
   historyFile: process.env.HISTORY_FILE || "data/history.jsonl",
   historyRetentionDays: Number(process.env.HISTORY_RETENTION_DAYS || 90),
   ctiApiKey: process.env.CTI_API_KEY || "",
@@ -21,4 +23,11 @@ export const config = {
 
 function trimTrailingSlash(value) {
   return value.replace(/\/+$/, "");
+}
+
+function parseBoolean(value, fallback) {
+  if (value === undefined || value === "") {
+    return fallback;
+  }
+  return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
 }

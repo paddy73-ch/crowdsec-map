@@ -92,6 +92,9 @@ environment:
 | `LAPI_URL` | CrowdSec LAPI URL |
 | `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/machine credentials for alerts |
 | `LAPI_API_KEY` | Bouncer key for decisions |
+| `PUBLIC_TARGET_IP` | Optional manual public target IP shown in the dashboard header |
+| `PUBLIC_TARGET_IP_AUTO` | Auto-detect public target IP when `PUBLIC_TARGET_IP` is empty, default `true` |
+| `PUBLIC_TARGET_IP_REFRESH_MINUTES` | Public IP auto-detect refresh interval, default `60` |
 | `HISTORY_FILE` | Persistent JSONL history file, default `data/history.jsonl` |
 | `HISTORY_RETENTION_DAYS` | History retention window, default `90` |
 | `CTI_API_KEY` | Optional CrowdSec CTI API key for on-demand IP reputation checks |

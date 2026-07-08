@@ -21,6 +21,9 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `Appdata`: `/mnt/user/appdata/crowdsec-map` is mounted to `/app/data` for the History view.
 - `HISTORY_FILE`: `/app/data/history.jsonl`
 - `HISTORY_RETENTION_DAYS`: `90`
+- `PUBLIC_TARGET_IP`: optional manual public IP shown in the dashboard header.
+- `PUBLIC_TARGET_IP_AUTO`: auto-detect the public IP when `PUBLIC_TARGET_IP` is empty, default `true`.
+- `PUBLIC_TARGET_IP_REFRESH_MINUTES`: public IP auto-detect refresh interval, default `60`.
 - `CTI_API_KEY`: optional CrowdSec CTI API key for on-demand IP reputation checks.
 - `CTI_CACHE_FILE`: `/app/data/cti-cache.json`
 - `CTI_CACHE_HOURS`: `72`
