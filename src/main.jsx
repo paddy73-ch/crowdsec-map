@@ -118,7 +118,7 @@ function Sidebar({ data, totals }) {
       </div>
 
       <Panel rankings={rankings} initialMode="countries" storageKey="top" />
-      <Panel rankings={rankings} initialMode="scenarios" storageKey="bottom" wide />
+      <Panel rankings={rankings} initialMode="ips" storageKey="bottom" wide />
 
     </aside>
   );
