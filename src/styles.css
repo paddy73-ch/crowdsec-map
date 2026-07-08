@@ -425,6 +425,18 @@ p {
   white-space: nowrap;
 }
 
+.timeline em {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: #8fdcca;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .warning {
   grid-column: 1 / -1;
   color: #ffd4a8;

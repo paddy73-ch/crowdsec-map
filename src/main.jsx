@@ -205,7 +205,7 @@ function WorldMap({ attacks }) {
           <g className={`attackPoint ${getAgeClass(attack.createdAt)}`} key={attack.id}>
             <circle cx={attack.x} cy={attack.y} r={Math.min(22, 7 + attack.count)} fill="url(#pulse)" />
             <circle cx={attack.x} cy={attack.y} r={Math.min(9, 3 + attack.count / 2)} />
-            <title>{`${attack.country} ${attack.sourceCount} source${attack.sourceCount === 1 ? "" : "s"} ${attack.scenario}`}</title>
+            <title>{`${attack.country} ${attack.sourceCount} source${attack.sourceCount === 1 ? "" : "s"} ${attack.scenario}${formatTarget(attack) ? ` -> ${formatTarget(attack)}` : ""}`}</title>
           </g>
         ))}
       </svg>
@@ -304,10 +304,15 @@ function Timeline({ attacks, error }) {
           <span>{formatTime(attack.createdAt)}</span>
           <strong>{attack.country}</strong>
           <p>{attack.scenario}</p>
+          {formatTarget(attack) && <em title={formatTarget(attack)}>→ {formatTarget(attack)}</em>}
         </article>
       ))}
     </footer>
   );
+}
+
+function formatTarget(attack) {
+  return attack.targetIp || attack.targetHost || "";
 }
 
 function formatTime(value) {
