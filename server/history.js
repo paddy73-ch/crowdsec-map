@@ -176,6 +176,73 @@ export async function readIpHistory(ip, options = {}) {
   };
 }
 
+export async function readGroupIps(options = {}) {
+  const days = clampNumber(options.days, 7, 1, MAX_HISTORY_DAYS);
+  const groupBy = normalizeGroupBy(options.groupBy);
+  const label = String(options.label || "").trim();
+
+  if (!label) {
+    throw new Error("Group label is missing");
+  }
+
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const ips = new Map();
+  let matchedEvents = 0;
+
+  await forEachHistoryEntry((entry) => {
+    const seenAt = new Date(entry.seenAt).getTime();
+    if (!Number.isFinite(seenAt) || seenAt < since || getHistoryKey(entry, groupBy) !== label) {
+      return;
+    }
+
+    matchedEvents += 1;
+    const count = Number(entry.count || 1);
+    const ip = entry.ip || "unknown";
+    const item = ips.get(ip) || createIpGroup(ip);
+
+    item.alerts += count;
+    item.events += 1;
+    item.daysSeen.add(entry.seenAt.slice(0, 10));
+    item.scenarioCounts.set(entry.scenario || "unknown", (item.scenarioCounts.get(entry.scenario || "unknown") || 0) + count);
+    item.countryCounts.set(entry.country || "??", (item.countryCounts.get(entry.country || "??") || 0) + count);
+    item.asNameCounts.set(entry.asName || "unknown", (item.asNameCounts.get(entry.asName || "unknown") || 0) + count);
+
+    if (!item.lastSeen || seenAt > new Date(item.lastSeen).getTime()) {
+      item.lastSeen = entry.seenAt;
+    }
+
+    ips.set(ip, item);
+  });
+
+  const items = [...ips.values()]
+    .map((item) => ({
+      ip: item.ip,
+      alerts: item.alerts,
+      events: item.events,
+      daysSeen: item.daysSeen.size,
+      lastSeen: item.lastSeen,
+      topScenario: topCount(item.scenarioCounts),
+      topCountry: topCount(item.countryCounts),
+      topAsName: topCount(item.asNameCounts)
+    }))
+    .sort((a, b) => {
+      if (b.alerts !== a.alerts) {
+        return b.alerts - a.alerts;
+      }
+      return new Date(b.lastSeen) - new Date(a.lastSeen);
+    })
+    .slice(0, 80);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    days,
+    groupBy,
+    label,
+    matchedEvents,
+    items
+  };
+}
+
 function normalizeHistoryEntry(alert, now) {
   const ip = String(alert.ip || "").trim();
   const seenAt = new Date(alert.createdAt || now).toISOString();
@@ -277,6 +344,19 @@ function createHistoryGroup(label) {
     scenarioCounts: new Map(),
     countryCounts: new Map(),
     firstSeen: "",
+    lastSeen: ""
+  };
+}
+
+function createIpGroup(ip) {
+  return {
+    ip,
+    alerts: 0,
+    events: 0,
+    daysSeen: new Set(),
+    scenarioCounts: new Map(),
+    countryCounts: new Map(),
+    asNameCounts: new Map(),
     lastSeen: ""
   };
 }

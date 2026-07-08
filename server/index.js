@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { config } from "./config.js";
-import { isIpAddress, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
+import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
 import { groupCounts } from "./normalize.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.js";
 
@@ -51,6 +51,18 @@ app.get("/api/history", async (request, response) => {
     days: request.query.days,
     groupBy: request.query.groupBy
   }));
+});
+
+app.get("/api/history/group", async (request, response) => {
+  try {
+    response.json(await readGroupIps({
+      days: request.query.days,
+      groupBy: request.query.groupBy,
+      label: request.query.label
+    }));
+  } catch (error) {
+    response.status(400).json({ error: error.message });
+  }
 });
 
 app.get("/api/history/ip/:ip", async (request, response) => {

@@ -171,7 +171,9 @@ select {
 .themeLight .recentEvents p,
 .themeLight .ipMetaGrid span,
 .themeLight .eventRow time,
-.themeLight .eventRow em {
+.themeLight .eventRow em,
+.themeLight .groupIpRow em,
+.themeLight .groupIpRow small {
   color: #58706c;
 }
 
@@ -183,11 +185,23 @@ select {
 }
 
 .themeLight .rawBlock pre,
-.themeLight .eventRow {
+.themeLight .eventRow,
+.themeLight .groupIpRow {
   color: #122321;
 }
 
 .themeLight .historyTable tr.clickableRow:hover td {
+  background: rgba(104, 221, 198, 0.13);
+}
+
+.themeLight .groupIpList p,
+.themeLight .groupIpRow {
+  border-color: rgba(39, 87, 82, 0.14);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.themeLight .groupIpRow:hover {
+  border-color: rgba(16, 124, 113, 0.24);
   background: rgba(104, 221, 198, 0.13);
 }
 
@@ -1213,6 +1227,75 @@ p {
   white-space: pre-wrap;
 }
 
+.groupModal {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.groupIpList {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  margin: 0 18px 18px;
+  overflow: auto;
+}
+
+.groupIpList p {
+  padding: 18px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  color: #8da39f;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.groupIpRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 96px 82px minmax(180px, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #d9e8e5;
+  background: rgba(14, 28, 32, 0.72);
+  cursor: pointer;
+  text-align: left;
+}
+
+.groupIpRow:hover {
+  border-color: rgba(104, 221, 198, 0.34);
+  background: rgba(104, 221, 198, 0.07);
+}
+
+.groupIpRow span {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.groupIpRow strong,
+.groupIpRow small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupIpRow i {
+  display: block;
+  height: 5px;
+  max-width: 220px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #68ddc6, #ffcf6e);
+}
+
+.groupIpRow em,
+.groupIpRow small {
+  color: #8da39f;
+  font-size: 12px;
+  font-style: normal;
+}
+
 .spin {
   animation: spin 0.9s linear infinite;
 }
@@ -1467,6 +1550,11 @@ p {
 
   .eventRow {
     grid-template-columns: 70px 34px minmax(0, 1fr) 34px;
+    gap: 8px;
+  }
+
+  .groupIpRow {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 

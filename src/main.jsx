@@ -393,6 +393,7 @@ function HistoryView() {
   const [groupBy, setGroupBy] = useState("cidr24");
   const [history, setHistory] = useState(null);
   const [selectedIp, setSelectedIp] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -481,14 +482,17 @@ function HistoryView() {
             <tbody>
               {history.items.map((item) => {
                 const isIpRow = groupBy === "ip" && isIpv4(item.label);
+                const isGroupRow = !isIpRow;
                 return (
                 <tr
-                  className={isIpRow ? "clickableRow" : ""}
+                  className={isIpRow || isGroupRow ? "clickableRow" : ""}
                   key={item.label}
                   onClick={() => {
                     if (isIpRow) {
                       setSelectedIp(item.label);
+                      return;
                     }
+                    setSelectedGroup({ groupBy, label: item.label });
                   }}
                 >
                   <td>
@@ -515,7 +519,108 @@ function HistoryView() {
           onClose={() => setSelectedIp("")}
         />
       )}
+      {selectedGroup && (
+        <GroupDetailModal
+          days={days}
+          group={selectedGroup}
+          onClose={() => setSelectedGroup(null)}
+          onSelectIp={(ip) => {
+            setSelectedGroup(null);
+            setSelectedIp(ip);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+function GroupDetailModal({ group, days, onClose, onSelectIp }) {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadDetail = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        days: String(days),
+        groupBy: group.groupBy,
+        label: group.label
+      });
+      const response = await fetch(`/api/history/group?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      setDetail(await response.json());
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [days, group.groupBy, group.label]);
+
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const maxAlerts = Math.max(...(detail?.items || []).map((item) => item.alerts), 1);
+
+  return (
+    <div className="modalBackdrop" role="presentation" onClick={onClose}>
+      <section className="ipModal groupModal" role="dialog" aria-modal="true" aria-labelledby="group-detail-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modalHeader">
+          <div>
+            <h3 id="group-detail-title">{group.label}</h3>
+            <p>{getHistoryGroupLabel(group.groupBy)} · {days}d window · select an IP for cscli details</p>
+          </div>
+          <button type="button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </header>
+
+        {error && <div className="warning">{error}</div>}
+        {loading && <div className="modalLoading">Loading group IPs...</div>}
+        {!loading && detail && (
+          <>
+            <div className="ipSummaryGrid">
+              <Metric icon={<BarChart3 />} label="IPs" value={detail.items.length || 0} />
+              <Metric icon={<Activity />} label="Events" value={detail.matchedEvents || 0} />
+              <Metric icon={<Timer />} label="Window" value={`${detail.days}d`} />
+            </div>
+
+            <div className="groupIpList">
+              {detail.items.length === 0 ? (
+                <p>No IPs found in the selected window.</p>
+              ) : (
+                detail.items.map((item) => (
+                  <button type="button" className="groupIpRow" key={item.ip} onClick={() => onSelectIp(item.ip)}>
+                    <span>
+                      <strong>{item.ip}</strong>
+                      <i style={{ width: `${Math.max(4, (item.alerts / maxAlerts) * 100)}%` }} />
+                    </span>
+                    <em>{item.alerts} alerts</em>
+                    <small>{item.daysSeen}/{detail.days} days</small>
+                    <small title={item.topScenario}>{item.topScenario}</small>
+                    <small>{item.topCountry}</small>
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </section>
+    </div>
   );
 }
 
