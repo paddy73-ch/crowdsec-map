@@ -34,9 +34,16 @@ services:
       ACCESS_LOG_ENABLED: "${ACCESS_LOG_ENABLED:-false}"
       ACCESS_LOG_FILE: "/app/data/access-log.jsonl"
       ACCESS_LOG_RETENTION_DAYS: "${ACCESS_LOG_RETENTION_DAYS:-30}"
+      INVESTIGATION_LOG_PATHS: "${INVESTIGATION_LOG_PATHS:-/opt/security-stack/zoraxy/config/log/*.log,/opt/security-stack/authelia/config/authelia.log,/var/log/pveproxy/access.log}"
+      INVESTIGATION_MAX_LINES: "${INVESTIGATION_MAX_LINES:-12}"
+      INVESTIGATION_TIMEOUT_MS: "${INVESTIGATION_TIMEOUT_MS:-8000}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - crowdsec-map-data:/app/data
+      # Optional for the IP Investigation panel. Enable only when these host paths exist.
+      # - /opt/security-stack/zoraxy/config/log:/opt/security-stack/zoraxy/config/log:ro
+      # - /opt/security-stack/authelia/config/authelia.log:/opt/security-stack/authelia/config/authelia.log:ro
+      # - /var/log/pveproxy/access.log:/var/log/pveproxy/access.log:ro
     networks:
       - security-stack_proxy
 

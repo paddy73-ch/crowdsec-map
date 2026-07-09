@@ -33,6 +33,7 @@ The app can read multiple CrowdSec sources. In the UI, switch between `Auto`, `L
 - Ranking panels for `Countries`, `IPs`, `Scenarios`, and `Bans`.
 - Active banned IP list with remaining ban duration.
 - Timeline grouped by source IP and minute, expandable up to three rows.
+- IP Investigation panel inspired by `csfind`: on-demand log hit counts, 403 counts, and sampled log lines from mounted host logs.
 
 ## Source Option A: `cscli` From an Existing CrowdSec Container
 
@@ -106,6 +107,23 @@ environment:
 | `ACCESS_LOG_ENABLED` | Optional demo visit logging, default `false` |
 | `ACCESS_LOG_FILE` | Persistent demo visit log file, default `data/access-log.jsonl` |
 | `ACCESS_LOG_RETENTION_DAYS` | Demo visit log retention, default `30` |
+| `INVESTIGATION_LOG_PATHS` | Comma, semicolon, or newline separated log paths/globs for IP investigation |
+| `INVESTIGATION_MAX_LINES` | Sample lines kept per investigation log source, default `12` |
+| `INVESTIGATION_TIMEOUT_MS` | Maximum server-side investigation scan time, default `8000` |
+
+## IP Investigation
+
+The IP detail overlay includes an on-demand Investigation block. It scans configured, read-only mounted host logs for the selected IP and selected History window. This is designed as the web-app version of the original `csfind` workflow: compare CrowdSec context with reverse proxy, MFA, Proxmox, or other access logs.
+
+Default investigation paths are:
+
+```text
+/opt/security-stack/zoraxy/config/log/*.log
+/opt/security-stack/authelia/config/authelia.log
+/var/log/pveproxy/access.log
+```
+
+When CrowdSec Map runs in Docker, the matching host paths must also be mounted into the container as read-only volumes. If no configured files are readable, the UI shows a warning instead of failing the page.
 
 ## Docker Image, Unraid, and Home Assistant
 

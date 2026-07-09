@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Globe2, Map as MapIcon, Moon, RefreshCcw, ShieldAlert, Sun, Timer, X } from "lucide-react";
+import { Activity, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Globe2, Map as MapIcon, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, X } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -830,6 +830,8 @@ function IpDetailModal({ ip, days, onClose }) {
 
             <IpLookupBlock ip={ip} />
 
+            <InvestigationBlock ip={ip} days={days} />
+
             <div className="recentEvents">
               <h4>Recent history events</h4>
               {detail.recentEvents.length === 0 ? (
@@ -869,6 +871,92 @@ function IpDetailModal({ ip, days, onClose }) {
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+function InvestigationBlock({ ip, days }) {
+  const [investigation, setInvestigation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadInvestigation = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ days: String(days) });
+      const response = await fetch(`/api/investigation/ip/${encodeURIComponent(ip)}?${params}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      setInvestigation(payload);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [days, ip]);
+
+  useEffect(() => {
+    setInvestigation(null);
+    setError("");
+  }, [days, ip]);
+
+  return (
+    <div className="investigationBlock">
+      <div className="investigationHeader">
+        <div>
+          <h4><Search size={15} /> Investigation</h4>
+          <p>Checks configured host logs for this IP in the selected {days}d window.</p>
+        </div>
+        <button type="button" onClick={loadInvestigation} disabled={loading}>
+          <RefreshCcw size={14} className={loading ? "spin" : ""} /> Run
+        </button>
+      </div>
+
+      {error && <div className="warning">investigation: {error}</div>}
+      {!investigation && !error && (
+        <p className="investigationHint">Inspired by csfind: compare CrowdSec context with Zoraxy, Authelia, Proxmox, or other mounted logs.</p>
+      )}
+      {investigation && (
+        <>
+          {investigation.warning && <div className="warning">investigation: {investigation.warning}</div>}
+          <div className="investigationGrid">
+            <div>
+              <span>Hits</span>
+              <strong>{investigation.totalHits}</strong>
+            </div>
+            <div>
+              <span>403</span>
+              <strong>{investigation.totalForbidden}</strong>
+            </div>
+            <div>
+              <span>Files</span>
+              <strong>{investigation.scannedFiles}/{investigation.availableFiles}</strong>
+            </div>
+          </div>
+
+          {investigation.sources.length > 0 && (
+            <div className="investigationSources">
+              {investigation.sources.map((source) => (
+                <details key={source.path} open={source.hits > 0}>
+                  <summary>
+                    <strong title={source.path}>{source.name}</strong>
+                    <span>{source.hits} hits · {source.forbidden} 403</span>
+                  </summary>
+                  {source.error && <div className="warning">{source.error}</div>}
+                  {source.sampledLines.length > 0 ? (
+                    <pre>{source.sampledLines.join("\n")}</pre>
+                  ) : (
+                    <p>No matching sample lines in this window.</p>
+                  )}
+                </details>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

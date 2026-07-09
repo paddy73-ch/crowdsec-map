@@ -181,6 +181,7 @@ select {
 
 .themeLight .ipMetaGrid div,
 .themeLight .lookupBlock,
+.themeLight .investigationBlock,
 .themeLight .ctiBlock,
 .themeLight .recentEvents,
 .themeLight .rawBlock,
@@ -195,6 +196,10 @@ select {
 .themeLight .ipMetaGrid span,
 .themeLight .ctiHeader p,
 .themeLight .lookupHeader p,
+.themeLight .investigationHeader p,
+.themeLight .investigationHint,
+.themeLight .investigationGrid span,
+.themeLight .investigationSources p,
 .themeLight .lookupStats,
 .themeLight .ctiGrid span,
 .themeLight .ctiHint,
@@ -209,6 +214,7 @@ select {
 .themeLight .rawActions button,
 .themeLight .lookupActions button,
 .themeLight .lookupActions a,
+.themeLight .investigationHeader button,
 .themeLight .ctiActions button,
 .themeLight .ctiActions a {
   color: #122321;
@@ -219,6 +225,7 @@ select {
 .themeLight .rawBlock pre,
 .themeLight .eventRow,
 .themeLight .lookupBlock,
+.themeLight .investigationBlock,
 .themeLight .ctiBlock,
 .themeLight .groupIpRow {
   color: #122321;
@@ -227,6 +234,17 @@ select {
 .themeLight .ctiGrid div {
   border-color: rgba(39, 87, 82, 0.12);
   background: rgba(238, 247, 245, 0.76);
+}
+
+.themeLight .investigationGrid div,
+.themeLight .investigationSources details {
+  border-color: rgba(39, 87, 82, 0.12);
+  background: rgba(238, 247, 245, 0.76);
+}
+
+.themeLight .investigationSources pre {
+  color: #122321;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .themeLight .ctiTags span {
@@ -1304,6 +1322,7 @@ p {
 
 .ipMetaGrid div,
 .lookupBlock,
+.investigationBlock,
 .ctiBlock,
 .recentEvents,
 .rawBlock {
@@ -1326,6 +1345,7 @@ p {
 }
 
 .lookupBlock,
+.investigationBlock,
 .ctiBlock {
   display: grid;
   gap: 12px;
@@ -1338,6 +1358,7 @@ p {
 }
 
 .lookupHeader,
+.investigationHeader,
 .ctiHeader,
 .ctiActions {
   display: flex;
@@ -1347,6 +1368,7 @@ p {
 }
 
 .lookupHeader h4,
+.investigationHeader h4,
 .ctiHeader h4,
 .recentEvents h4,
 .rawHeader h4 {
@@ -1400,10 +1422,113 @@ p {
 }
 
 .lookupHeader p,
+.investigationHeader p,
+.investigationHint,
+.investigationSources p,
 .lookupStats {
   margin: 4px 0 0;
   color: #8da39f;
   font-size: 12px;
+}
+
+.investigationHeader button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #e8f3f1;
+  background: #102025;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.investigationHeader button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.investigationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.investigationGrid div {
+  min-width: 0;
+  border: 1px solid rgba(151, 181, 176, 0.1);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(8, 16, 19, 0.28);
+}
+
+.investigationGrid span {
+  display: block;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.investigationGrid strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.investigationSources {
+  display: grid;
+  gap: 8px;
+}
+
+.investigationSources details {
+  border: 1px solid rgba(151, 181, 176, 0.1);
+  border-radius: 8px;
+  background: rgba(8, 16, 19, 0.28);
+}
+
+.investigationSources summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 11px;
+  cursor: pointer;
+  color: #d9e8e5;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.investigationSources summary strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investigationSources summary span {
+  flex: 0 0 auto;
+  color: #8da39f;
+  font-weight: 700;
+}
+
+.investigationSources pre {
+  max-height: 220px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border-top: 1px solid rgba(151, 181, 176, 0.1);
+  color: #d9e8e5;
+  background: rgba(3, 9, 11, 0.32);
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+}
+
+.investigationSources p {
+  padding: 0 11px 11px;
 }
 
 .ctiHeader span {
@@ -1902,15 +2027,23 @@ p {
 
   .ipSummaryGrid,
   .ipMetaGrid,
+  .investigationGrid,
   .ctiGrid {
     grid-template-columns: 1fr;
   }
 
   .ctiHeader,
   .lookupHeader,
+  .investigationHeader,
   .ctiActions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .investigationSources summary {
+    align-items: start;
+    flex-direction: column;
+    padding: 10px 11px;
   }
 
   .lookupActions {

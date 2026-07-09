@@ -5,6 +5,7 @@ import { readAccessSummary, recordAccessVisit } from "./accessLog.js";
 import { config } from "./config.js";
 import { readIpReputation, readReputationStats } from "./cti.js";
 import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
+import { readIpInvestigation } from "./investigation.js";
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.js";
@@ -116,6 +117,19 @@ app.get("/api/reputation/ip/:ip", async (request, response) => {
     response.json(await readIpReputation(request.params.ip, { force: request.query.refresh === "1" }));
   } catch (error) {
     response.status(502).json({ error: error.message });
+  }
+});
+
+app.get("/api/investigation/ip/:ip", async (request, response) => {
+  if (!isIpAddress(request.params.ip)) {
+    response.status(400).json({ error: "Invalid IP address" });
+    return;
+  }
+
+  try {
+    response.json(await readIpInvestigation(request.params.ip, { days: request.query.days }));
+  } catch (error) {
+    response.status(500).json({ error: error.message });
   }
 });
 

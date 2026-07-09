@@ -22,6 +22,13 @@ export const config = {
   accessLogEnabled: parseBoolean(process.env.ACCESS_LOG_ENABLED, false),
   accessLogFile: process.env.ACCESS_LOG_FILE || "data/access-log.jsonl",
   accessLogRetentionDays: Number(process.env.ACCESS_LOG_RETENTION_DAYS || 30),
+  investigationLogPaths: parseList(process.env.INVESTIGATION_LOG_PATHS || [
+    "/opt/security-stack/zoraxy/config/log/*.log",
+    "/opt/security-stack/authelia/config/authelia.log",
+    "/var/log/pveproxy/access.log"
+  ].join(",")),
+  investigationMaxLines: Number(process.env.INVESTIGATION_MAX_LINES || 12),
+  investigationTimeoutMs: Number(process.env.INVESTIGATION_TIMEOUT_MS || 8000),
   staticDir: process.env.STATIC_DIR || "dist"
 };
 
@@ -34,4 +41,11 @@ function parseBoolean(value, fallback) {
     return fallback;
   }
   return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
+}
+
+function parseList(value) {
+  return String(value || "")
+    .split(/[\n,;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
