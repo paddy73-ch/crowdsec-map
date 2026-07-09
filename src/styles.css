@@ -1272,6 +1272,7 @@ p {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  width: fit-content;
 }
 
 .logBanSince span {
@@ -1282,6 +1283,8 @@ p {
 
 .logModalMeta button {
   flex: 0 0 auto;
+  width: auto;
+  min-width: max-content;
   min-height: 26px;
   padding: 0 8px;
   color: #68ddc6;
