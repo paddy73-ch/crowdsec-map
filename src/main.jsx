@@ -1002,6 +1002,7 @@ function InvestigationBlock({ ip, days }) {
       )}
       {selectedSource && (
         <InvestigationLogModal
+          activeBans={investigation?.activeBans}
           days={days}
           ip={ip}
           source={selectedSource}
@@ -1012,7 +1013,7 @@ function InvestigationBlock({ ip, days }) {
   );
 }
 
-function InvestigationLogModal({ ip, days, source, onClose }) {
+function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
   const [lines, setLines] = useState([]);
   const [summary, setSummary] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -1078,7 +1079,10 @@ function InvestigationLogModal({ ip, days, source, onClose }) {
         <header className="modalHeader">
           <div>
             <h3 id="investigation-log-title">{source.name}</h3>
-            <p>{ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines</p>
+            <p>
+              {ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines
+              {activeBans?.since ? ` · ban since: ${formatBanSinceExact(activeBans.since)}` : ""}
+            </p>
           </div>
           <button type="button" onClick={onClose} title="Close" aria-label="Close">
             <X size={18} />
@@ -1147,6 +1151,29 @@ function clampLineLimit(value) {
 }
 
 function formatBanSince(value) {
+  return formatBanSinceCompact(value);
+}
+
+function formatBanSinceCompact(value) {
+  if (!value) {
+    return "none";
+  }
+
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) {
+    return value;
+  }
+
+  const totalMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `${hours}h ${pad2(minutes)}m ago`;
+  }
+  return `${minutes}m ago`;
+}
+
+function formatBanSinceExact(value) {
   if (!value) {
     return "none";
   }
@@ -1186,7 +1213,7 @@ function buildActiveBanTitle(activeBans) {
       `ID ${ban.id}`,
       ban.scenario,
       ban.origin && `origin ${ban.origin}`,
-      ban.createdAt && `since ${formatBanSince(ban.createdAt)} (${ban.createdAt})`,
+      ban.createdAt && `since ${formatBanSinceExact(ban.createdAt)} (${ban.createdAt})`,
       ban.duration && `remaining ${formatBanRemaining(ban.duration)} (${ban.duration})`,
       ban.until && `until ${ban.until}`
     ].filter(Boolean).join(" · "))
