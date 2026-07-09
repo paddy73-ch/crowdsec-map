@@ -4,6 +4,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { config } from "./config.js";
 import { isIpAddress } from "./history.js";
+import { readActiveBans } from "./sources.js";
 
 const MAX_INVESTIGATION_DAYS = 180;
 const MAX_LINE_LENGTH = 700;
@@ -22,6 +23,7 @@ export async function readIpInvestigation(ip, options = {}) {
   const configuredPaths = config.investigationLogPaths;
   const files = await expandLogFiles(configuredPaths);
   const sources = [];
+  const activeBanSummary = await readActiveBanSummary(ip);
   let totalHits = 0;
   let totalForbidden = 0;
   let timedOut = false;
@@ -48,12 +50,57 @@ export async function readIpInvestigation(ip, options = {}) {
     scannedFiles: sources.length,
     totalHits,
     totalForbidden,
+    activeBans: activeBanSummary,
     maxLines,
     maxSampleLines: MAX_SAMPLE_LINES,
     timedOut,
     sources: sources.sort((a, b) => b.hits - a.hits || a.name.localeCompare(b.name)),
     warning: buildWarning(configuredPaths, files, timedOut)
   };
+}
+
+async function readActiveBanSummary(ip) {
+  try {
+    const bans = (await readActiveBans())
+      .filter((ban) => ban.ip === ip)
+      .sort((a, b) => toTimestamp(a.createdAt) - toTimestamp(b.createdAt));
+
+    return {
+      count: bans.length,
+      since: bans.find((ban) => ban.createdAt)?.createdAt || "",
+      remaining: pickShortestDuration(bans),
+      items: bans.map((ban) => ({
+        id: ban.id,
+        scenario: ban.scenario,
+        origin: ban.origin,
+        scope: ban.scope,
+        value: ban.ip,
+        createdAt: ban.createdAt,
+        duration: ban.duration,
+        until: ban.until
+      }))
+    };
+  } catch (error) {
+    return {
+      count: 0,
+      since: "",
+      remaining: "",
+      items: [],
+      warning: error.message
+    };
+  }
+}
+
+function pickShortestDuration(bans) {
+  const durations = bans
+    .map((ban) => ({ raw: ban.duration, seconds: parseDurationSeconds(ban.duration) }))
+    .filter((duration) => duration.raw);
+
+  const parsed = durations.filter((duration) => Number.isFinite(duration.seconds));
+  if (parsed.length > 0) {
+    return parsed.sort((a, b) => a.seconds - b.seconds)[0].raw;
+  }
+  return durations[0]?.raw || "";
 }
 
 export async function readInvestigationLogLines(ip, options = {}) {
@@ -272,6 +319,35 @@ function extractTimestamp(line) {
 
 function isForbiddenLine(line) {
   return /\s403(\s|$)|" 403\s/.test(line);
+}
+
+function parseDurationSeconds(value) {
+  const text = String(value || "");
+  if (!text) {
+    return NaN;
+  }
+
+  let seconds = 0;
+  const regex = /(\d+)\s*(h|m|s|d)/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const amount = Number(match[1]);
+    if (match[2] === "d") {
+      seconds += amount * 86400;
+    } else if (match[2] === "h") {
+      seconds += amount * 3600;
+    } else if (match[2] === "m") {
+      seconds += amount * 60;
+    } else {
+      seconds += amount;
+    }
+  }
+  return seconds || NaN;
+}
+
+function toTimestamp(value) {
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : Number.MAX_SAFE_INTEGER;
 }
 
 function normalizeStatusFilter(value) {

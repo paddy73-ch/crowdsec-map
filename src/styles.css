@@ -1530,7 +1530,7 @@ p {
 
 .investigationGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1550,8 +1550,11 @@ p {
 
 .investigationGrid strong {
   display: block;
+  overflow: hidden;
   margin-top: 4px;
-  font-size: 20px;
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .investigationSources {

@@ -951,6 +951,18 @@ function InvestigationBlock({ ip, days }) {
               <span>403 (Forbidden)</span>
               <strong>{investigation.totalForbidden}</strong>
             </div>
+            <div title={buildActiveBanTitle(investigation.activeBans)}>
+              <span>Active Bans</span>
+              <strong>{investigation.activeBans?.count || 0}</strong>
+            </div>
+            <div title={buildActiveBanTitle(investigation.activeBans)}>
+              <span>Ban since</span>
+              <strong>{formatBanSince(investigation.activeBans?.since)}</strong>
+            </div>
+            <div title={buildActiveBanTitle(investigation.activeBans)}>
+              <span>Remaining</span>
+              <strong>{investigation.activeBans?.remaining || "none"}{investigation.activeBans?.remaining ? " left" : ""}</strong>
+            </div>
             <div>
               <span>Files</span>
               <strong>{investigation.scannedFiles}/{investigation.availableFiles}</strong>
@@ -1132,6 +1144,29 @@ function clampLineLimit(value) {
     return 50;
   }
   return Math.max(1, Math.min(200, Math.round(number)));
+}
+
+function formatBanSince(value) {
+  return value ? formatRelativeTime(value) : "none";
+}
+
+function buildActiveBanTitle(activeBans) {
+  if (activeBans?.warning) {
+    return `Active ban lookup failed: ${activeBans.warning}`;
+  }
+  if (!activeBans?.items?.length) {
+    return "No active ban for this IP.";
+  }
+  return activeBans.items
+    .map((ban) => [
+      `ID ${ban.id}`,
+      ban.scenario,
+      ban.origin && `origin ${ban.origin}`,
+      ban.createdAt && `since ${ban.createdAt}`,
+      ban.duration && `remaining ${ban.duration}`,
+      ban.until && `until ${ban.until}`
+    ].filter(Boolean).join(" · "))
+    .join("\n");
 }
 
 function IpLookupBlock({ ip }) {

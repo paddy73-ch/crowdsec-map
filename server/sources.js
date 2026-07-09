@@ -150,6 +150,8 @@ function normalizeActiveBans(payload) {
           country: item.source?.cn || item.country || "",
           scenario: String(decision.scenario || item.scenario || item.reason || "ban").replace(/^crowdsecurity\//, ""),
           duration: decision.duration || decision.expiration || "",
+          createdAt: decision.created_at || decision.createdAt || decision.start_at || item.created_at || item.createdAt || "",
+          until: decision.until || decision.expires_at || decision.expiration || "",
           origin: decision.origin || item.origin || "",
           scope: decision.scope || item.source?.scope || item.scope || "Ip"
         });
