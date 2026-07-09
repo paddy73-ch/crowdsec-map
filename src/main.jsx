@@ -1086,14 +1086,14 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
           <div>
             <h3 id="investigation-log-title">{source.name}</h3>
             <div className="logModalMeta">
-              <p>
-                {ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines
-                {banSinceSearch ? ` · ban since: ${banSinceSearch}` : ""}
-              </p>
+              <p>{ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines</p>
               {banSinceSearch && (
-                <button type="button" onClick={applyBanSinceSearch}>
-                  Use timestamp
-                </button>
+                <div className="logBanSince">
+                  <span>ban since: {banSinceSearch}</span>
+                  <button type="button" onClick={applyBanSinceSearch}>
+                    Use timestamp
+                  </button>
+                </div>
               )}
             </div>
           </div>
