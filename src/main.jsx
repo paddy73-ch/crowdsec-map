@@ -877,6 +877,7 @@ function IpDetailModal({ ip, days, onClose }) {
 
 function InvestigationBlock({ ip, days }) {
   const [investigation, setInvestigation] = useState(null);
+  const [selectedSource, setSelectedSource] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lineLimit, setLineLimit] = useState(50);
@@ -962,7 +963,18 @@ function InvestigationBlock({ ip, days }) {
                 <details key={source.path} open={source.hits > 0}>
                   <summary>
                     <strong title={source.path}>{source.name}</strong>
-                    <span>{source.hits} hits · {source.forbidden} 403 (Forbidden)</span>
+                    <span>
+                      {source.hits > 0 && (
+                        <button type="button" onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelectedSource(source);
+                        }}>
+                          See all
+                        </button>
+                      )}
+                      {source.hits} hits · {source.forbidden} 403 (Forbidden)
+                    </span>
                   </summary>
                   {source.error && <div className="warning">{source.error}</div>}
                   {source.sampledLines.length > 0 ? (
@@ -976,6 +988,140 @@ function InvestigationBlock({ ip, days }) {
           )}
         </>
       )}
+      {selectedSource && (
+        <InvestigationLogModal
+          days={days}
+          ip={ip}
+          source={selectedSource}
+          onClose={() => setSelectedSource(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function InvestigationLogModal({ ip, days, source, onClose }) {
+  const [lines, setLines] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("newest");
+  const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [nextOffset, setNextOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadLines = useCallback(async ({ offset = 0, reset = false } = {}) => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        days: String(days),
+        path: source.path,
+        offset: String(offset),
+        limit: "200",
+        filter,
+        sort,
+        search: appliedSearch
+      });
+      const response = await fetch(`/api/investigation/ip/${encodeURIComponent(ip)}/log-lines?${params}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || `HTTP ${response.status}`);
+      }
+      setSummary(payload);
+      setNextOffset(payload.nextOffset);
+      setLines((current) => reset ? payload.lines : [...current, ...payload.lines]);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [appliedSearch, days, filter, ip, sort, source.path]);
+
+  useEffect(() => {
+    setLines([]);
+    setNextOffset(0);
+    loadLines({ offset: 0, reset: true });
+  }, [appliedSearch, filter, loadLines, sort, source.path]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const applySearch = (event) => {
+    event.preventDefault();
+    setAppliedSearch(search.trim());
+  };
+
+  return (
+    <div className="modalBackdrop" role="presentation" onClick={onClose}>
+      <section className="ipModal investigationLogModal" role="dialog" aria-modal="true" aria-labelledby="investigation-log-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modalHeader">
+          <div>
+            <h3 id="investigation-log-title">{source.name}</h3>
+            <p>{ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines</p>
+          </div>
+          <button type="button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </header>
+
+        <form className="logLineControls" onSubmit={applySearch}>
+          <label>
+            <span>Search</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="path, router, origin..." />
+          </label>
+          <label>
+            <span>Filter</span>
+            <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+              <option value="all">All</option>
+              <option value="forbidden">403 only</option>
+              <option value="non-forbidden">Non-403</option>
+            </select>
+          </label>
+          <label>
+            <span>Sort</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </label>
+          <button type="submit">Apply</button>
+        </form>
+
+        {error && <div className="warning">log-lines: {error}</div>}
+        {summary && (
+          <div className="logLineMeta">
+            <span>{summary.totalHits} hits</span>
+            <span>{summary.totalForbidden} 403 (Forbidden)</span>
+            <span>{summary.filteredHits} after filter</span>
+            <span>showing {lines.length}</span>
+          </div>
+        )}
+
+        <div className="logLineList">
+          {lines.length === 0 && !loading && <p>No log lines match the current filters.</p>}
+          {lines.map((item, index) => (
+            <div className={item.forbidden ? "logLineRow forbidden" : "logLineRow"} key={`${item.timestamp}-${index}-${item.line}`}>
+              <span>{item.forbidden ? "403" : "OK"}</span>
+              <code>{item.line}</code>
+            </div>
+          ))}
+        </div>
+
+        <div className="logLineFooter">
+          <button type="button" onClick={() => loadLines({ offset: nextOffset || 0 })} disabled={loading || nextOffset === null}>
+            <RefreshCcw size={14} className={loading ? "spin" : ""} /> {nextOffset === null ? "All loaded" : "Load more"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

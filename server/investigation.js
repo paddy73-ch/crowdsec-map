@@ -8,6 +8,7 @@ import { isIpAddress } from "./history.js";
 const MAX_INVESTIGATION_DAYS = 180;
 const MAX_LINE_LENGTH = 700;
 const MAX_SAMPLE_LINES = 200;
+const MAX_DETAIL_LIMIT = 500;
 
 export async function readIpInvestigation(ip, options = {}) {
   if (!isIpAddress(ip)) {
@@ -55,6 +56,101 @@ export async function readIpInvestigation(ip, options = {}) {
   };
 }
 
+export async function readInvestigationLogLines(ip, options = {}) {
+  if (!isIpAddress(ip)) {
+    throw new Error("Invalid IP address");
+  }
+
+  const requestedPath = String(options.path || "");
+  const days = clampNumber(options.days, 7, 1, MAX_INVESTIGATION_DAYS);
+  const offset = clampNumber(options.offset, 0, 0, 1000000);
+  const limit = clampNumber(options.limit, 200, 1, MAX_DETAIL_LIMIT);
+  const filter = normalizeStatusFilter(options.filter);
+  const sort = options.sort === "oldest" ? "oldest" : "newest";
+  const search = String(options.search || "").trim().toLowerCase();
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const deadline = Date.now() + Math.max(1000, config.investigationTimeoutMs);
+  const files = await expandLogFiles(config.investigationLogPaths);
+  const file = files.find((candidate) => candidate === requestedPath);
+
+  if (!file) {
+    throw new Error("Investigation log source is not configured or readable.");
+  }
+
+  const matcher = buildIpMatcher(ip);
+  const entries = [];
+  let totalHits = 0;
+  let totalForbidden = 0;
+  let filteredHits = 0;
+  let timedOut = false;
+
+  try {
+    const stream = createReadStream(file, { encoding: "utf8" });
+    const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+    for await (const line of reader) {
+      if (Date.now() > deadline) {
+        timedOut = true;
+        stream.destroy();
+        break;
+      }
+
+      if (!matcher.test(line) || !isInsideWindow(line, since)) {
+        continue;
+      }
+
+      const forbidden = isForbiddenLine(line);
+      totalHits += 1;
+      if (forbidden) {
+        totalForbidden += 1;
+      }
+
+      if (filter === "forbidden" && !forbidden) {
+        continue;
+      }
+      if (filter === "non-forbidden" && forbidden) {
+        continue;
+      }
+      if (search && !line.toLowerCase().includes(search)) {
+        continue;
+      }
+
+      filteredHits += 1;
+      entries.push({
+        line: truncateLine(line),
+        forbidden,
+        timestamp: extractTimestamp(line)
+      });
+    }
+  } catch (error) {
+    throw new Error(`Log source could not be read: ${error.message}`);
+  }
+
+  entries.sort((a, b) => sort === "oldest" ? a.timestamp - b.timestamp : b.timestamp - a.timestamp);
+
+  return {
+    ip,
+    days,
+    source: {
+      name: path.basename(file),
+      path: file
+    },
+    generatedAt: new Date().toISOString(),
+    offset,
+    limit,
+    nextOffset: offset + limit < filteredHits ? offset + limit : null,
+    totalHits,
+    totalForbidden,
+    filteredHits,
+    filter,
+    sort,
+    search,
+    maxLimit: MAX_DETAIL_LIMIT,
+    timedOut,
+    lines: entries.slice(offset, offset + limit)
+  };
+}
+
 async function scanLogFile(file, ip, options) {
   const matcher = buildIpMatcher(ip);
   const source = {
@@ -83,7 +179,7 @@ async function scanLogFile(file, ip, options) {
       }
 
       source.hits += 1;
-      if (/\s403(\s|$)|" 403\s/.test(line)) {
+      if (isForbiddenLine(line)) {
         source.forbidden += 1;
       }
 
@@ -172,6 +268,14 @@ function extractTimestamp(line) {
   const normalized = match[0].replace(" ", "T");
   const timestamp = new Date(normalized).getTime();
   return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function isForbiddenLine(line) {
+  return /\s403(\s|$)|" 403\s/.test(line);
+}
+
+function normalizeStatusFilter(value) {
+  return ["all", "forbidden", "non-forbidden"].includes(value) ? value : "all";
 }
 
 function globBasenameToRegex(value) {

@@ -5,7 +5,7 @@ import { readAccessSummary, recordAccessVisit } from "./accessLog.js";
 import { config } from "./config.js";
 import { readIpReputation, readReputationStats } from "./cti.js";
 import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
-import { readIpInvestigation } from "./investigation.js";
+import { readInvestigationLogLines, readIpInvestigation } from "./investigation.js";
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.js";
@@ -133,6 +133,27 @@ app.get("/api/investigation/ip/:ip", async (request, response) => {
     }));
   } catch (error) {
     response.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/investigation/ip/:ip/log-lines", async (request, response) => {
+  if (!isIpAddress(request.params.ip)) {
+    response.status(400).json({ error: "Invalid IP address" });
+    return;
+  }
+
+  try {
+    response.json(await readInvestigationLogLines(request.params.ip, {
+      days: request.query.days,
+      path: request.query.path,
+      offset: request.query.offset,
+      limit: request.query.limit,
+      filter: request.query.filter,
+      sort: request.query.sort,
+      search: request.query.search
+    }));
+  } catch (error) {
+    response.status(400).json({ error: error.message });
   }
 });
 

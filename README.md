@@ -33,7 +33,7 @@ The app can read multiple CrowdSec sources. In the UI, switch between `Auto`, `L
 - Ranking panels for `Countries`, `IPs`, `Scenarios`, and `Bans`.
 - Active banned IP list with remaining ban duration.
 - Timeline grouped by source IP and minute, expandable up to three rows.
-- IP Investigation panel inspired by `csfind`: on-demand log hit counts, 403 counts, and sampled log lines from mounted host logs.
+- IP Investigation panel inspired by `csfind`: on-demand log hit counts, 403 counts, sampled log lines, and a paginated `See all` log view with search, filter, and sorting.
 
 ## Source Option A: `cscli` From an Existing CrowdSec Container
 

@@ -216,6 +216,11 @@ select {
 .themeLight .lookupActions a,
 .themeLight .investigationRunControls input,
 .themeLight .investigationHeader button,
+.themeLight .investigationSources summary button,
+.themeLight .logLineControls input,
+.themeLight .logLineControls select,
+.themeLight .logLineControls button,
+.themeLight .logLineFooter button,
 .themeLight .ctiActions button,
 .themeLight .ctiActions a {
   color: #122321;
@@ -264,6 +269,29 @@ select {
 .themeLight .investigationSources pre {
   color: #122321;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.themeLight .logLineControls,
+.themeLight .logLineMeta,
+.themeLight .logLineList,
+.themeLight .logLineFooter {
+  border-color: rgba(39, 87, 82, 0.14);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.themeLight .logLineControls label {
+  color: #58706c;
+}
+
+.themeLight .logLineRow {
+  color: #122321;
+  border-color: rgba(39, 87, 82, 0.12);
+  background: rgba(238, 247, 245, 0.66);
+}
+
+.themeLight .logLineRow span,
+.themeLight .logLineMeta span {
+  color: #40645f;
 }
 
 .themeLight .ctiTags span {
@@ -1558,9 +1586,27 @@ p {
 }
 
 .investigationSources summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
   color: #8da39f;
   font-weight: 700;
+}
+
+.investigationSources summary button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  border: 1px solid rgba(104, 221, 198, 0.22);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #68ddc6;
+  background: rgba(104, 221, 198, 0.09);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
 }
 
 .investigationSources pre {
@@ -1577,6 +1623,129 @@ p {
 
 .investigationSources p {
   padding: 0 11px 11px;
+}
+
+.investigationLogModal {
+  width: min(1180px, 100%);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.logLineControls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 150px 170px auto;
+  gap: 10px;
+  margin: 0 18px;
+  padding: 12px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.logLineControls label {
+  display: grid;
+  gap: 5px;
+  color: #8da39f;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.logLineControls input,
+.logLineControls select,
+.logLineControls button,
+.logLineFooter button {
+  min-height: 34px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #e8f3f1;
+  background: #102025;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.logLineControls button,
+.logLineFooter button {
+  align-self: end;
+  cursor: pointer;
+}
+
+.logLineFooter button:disabled {
+  cursor: default;
+  opacity: 0.56;
+}
+
+.logLineMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.logLineMeta span {
+  color: #8da39f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.logLineList {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  margin: 0 18px;
+  overflow: auto;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.logLineList p {
+  margin: 0;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.logLineRow {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(151, 181, 176, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  color: #d9e8e5;
+  background: rgba(8, 16, 19, 0.28);
+}
+
+.logLineRow span {
+  color: #8da39f;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.logLineRow.forbidden span {
+  color: #ff9a72;
+}
+
+.logLineRow code {
+  overflow-wrap: anywhere;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.logLineFooter {
+  display: flex;
+  justify-content: center;
+  margin: 0 18px 18px;
+  padding: 12px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  background: rgba(14, 28, 32, 0.72);
 }
 
 .ctiHeader span {
@@ -2092,6 +2261,19 @@ p {
     align-items: start;
     flex-direction: column;
     padding: 10px 11px;
+  }
+
+  .investigationSources summary span {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .logLineControls {
+    grid-template-columns: 1fr;
+  }
+
+  .logLineRow {
+    grid-template-columns: 1fr;
   }
 
   .lookupActions {
