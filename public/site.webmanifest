@@ -9,19 +9,19 @@
   "theme_color": "#f5fbfb",
   "icons": [
     {
-      "src": "/pwa-192-radar-light.png",
+      "src": "pwa-192-radar-light.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-512-radar-light.png",
+      "src": "pwa-512-radar-light.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-maskable-512-radar-light.png",
+      "src": "pwa-maskable-512-radar-light.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
