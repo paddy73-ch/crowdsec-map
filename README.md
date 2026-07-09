@@ -1,5 +1,7 @@
 ![CrowdSec Map social preview](.github/social-preview.png)
 
+[![Buy Me a Coffee](https://img.shields.shields.shields.shields.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/paddy73.ch)
+
 # CrowdSec Map
 
 CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decisions on a live world map. It shows attack origins, active bans, countries, source IPs, scenarios, and a compact timeline for recent activity.
