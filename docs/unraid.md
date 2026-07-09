@@ -27,6 +27,9 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `CTI_API_KEY`: optional CrowdSec CTI API key for on-demand IP reputation checks.
 - `CTI_CACHE_FILE`: `/app/data/cti-cache.json`
 - `CTI_CACHE_HOURS`: `72`
+- `ACCESS_LOG_ENABLED`: optional demo visit logging, default `false`.
+- `ACCESS_LOG_FILE`: `/app/data/access-log.jsonl`
+- `ACCESS_LOG_RETENTION_DAYS`: `30`
 - Docker socket mount is optional but required when using `cscli` via `CROWDSEC_CONTAINER`.
 - LAPI mode avoids Docker socket access and is preferred when you have watcher or bouncer credentials.
 

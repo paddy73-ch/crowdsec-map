@@ -38,6 +38,10 @@
   <Config Name="CrowdSec CTI API Key" Target="CTI_API_KEY" Default="" Description="Optional CrowdSec CTI API key for on-demand IP reputation checks." Type="Variable" Display="advanced" Required="false" Mask="true"/>
   <Config Name="CTI Cache File" Target="CTI_CACHE_FILE" Default="/app/data/cti-cache.json" Description="Persistent CrowdSec CTI reputation cache file." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data/cti-cache.json</Config>
   <Config Name="CTI Cache Hours" Target="CTI_CACHE_HOURS" Default="72" Description="CrowdSec CTI cache duration in hours." Type="Variable" Display="advanced" Required="true" Mask="false">72</Config>
+  <Config Name="Trust Proxy Headers" Target="TRUST_PROXY" Default="true" Description="Trust reverse proxy headers such as X-Forwarded-For." Type="Variable" Display="advanced" Required="true" Mask="false">true</Config>
+  <Config Name="Access Log Enabled" Target="ACCESS_LOG_ENABLED" Default="false" Description="Optional demo visit logging. Logs HTML page visits, not API calls or assets." Type="Variable" Display="advanced" Required="true" Mask="false">false</Config>
+  <Config Name="Access Log File" Target="ACCESS_LOG_FILE" Default="/app/data/access-log.jsonl" Description="Persistent demo visit log file." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data/access-log.jsonl</Config>
+  <Config Name="Access Log Retention Days" Target="ACCESS_LOG_RETENTION_DAYS" Default="30" Description="Demo visit log retention in days." Type="Variable" Display="advanced" Required="true" Mask="false">30</Config>
   <Config Name="Appdata" Target="/app/data" Default="/mnt/user/appdata/crowdsec-map" Mode="rw" Description="Persistent CrowdSec Map data directory for History." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/crowdsec-map</Config>
   <Config Name="Docker Socket" Target="/var/run/docker.sock" Default="/var/run/docker.sock" Mode="ro" Description="Optional. Required for cscli mode and active bans via CrowdSec container." Type="Path" Display="advanced" Required="false" Mask="false">/var/run/docker.sock</Config>
 </Container>

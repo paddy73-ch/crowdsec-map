@@ -54,6 +54,7 @@ function App() {
   const [refreshSeconds, setRefreshSeconds] = useState(readStoredRefreshSeconds);
   const [theme, setTheme] = useState(readStoredTheme);
   const [view, setView] = useState("live");
+  const [hiddenMenuOpen, setHiddenMenuOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,6 +111,7 @@ function App() {
           data={data}
           loading={loading}
           onRefresh={loadData}
+          onOpenHiddenMenu={() => setHiddenMenuOpen(true)}
         />
         {view === "live" ? (
           <>
@@ -120,6 +122,7 @@ function App() {
         ) : (
           <HistoryView />
         )}
+        {hiddenMenuOpen && <HiddenMenuModal onClose={() => setHiddenMenuOpen(false)} />}
       </section>
     </main>
   );
@@ -271,10 +274,18 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
   );
 }
 
-function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSeconds, setRefreshSeconds, data, loading, onRefresh }) {
+function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSeconds, setRefreshSeconds, data, loading, onRefresh, onOpenHiddenMenu }) {
   const [sourceOpen, setSourceOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
   const displayedSource = data?.source || source || "...";
+  const openHiddenMenu = (event) => {
+    if (!event.shiftKey || !event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    onOpenHiddenMenu();
+  };
 
   return (
     <header className={`toolbar ${view === "live" ? "toolbarLive" : "toolbarHistory"}`}>
@@ -387,7 +398,108 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </button>
       </div>
+      {view === "history" && (
+        <button
+          type="button"
+          className="hiddenMenuTrigger"
+          onMouseDown={openHiddenMenu}
+          onContextMenu={openHiddenMenu}
+          title="π"
+          aria-label="Hidden menu"
+        >
+          π
+        </button>
+      )}
     </header>
+  );
+}
+
+function HiddenMenuModal({ onClose }) {
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState("");
+
+  const loadSummary = useCallback(async () => {
+    setError("");
+    try {
+      const response = await fetch("/api/access-log/summary?days=7");
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      setSummary(await response.json());
+    } catch (loadError) {
+      setError(loadError.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="modalBackdrop" role="presentation" onClick={onClose}>
+      <section className="hiddenMenuModal" role="dialog" aria-modal="true" aria-labelledby="hidden-menu-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modalHeader">
+          <div>
+            <h3 id="hidden-menu-title">π</h3>
+            <p>Demo visit log</p>
+          </div>
+          <button type="button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </header>
+        {error && <div className="warning">access-log: {error}</div>}
+        {!error && !summary && <div className="modalLoading">Loading access log...</div>}
+        {summary && (
+          <div className="hiddenMenuContent">
+            <div className="hiddenMenuStats">
+              <Metric icon={<Activity />} label="24h visits" value={summary.visits24h || 0} />
+              <Metric icon={<Crosshair />} label="Unique IPs" value={summary.uniqueIps || 0} />
+              <Metric icon={<Timer />} label="Retention" value={`${summary.retentionDays}d`} />
+            </div>
+            {!summary.enabled && <div className="warning">Access log is disabled.</div>}
+            <HiddenMenuList title="Top IPs" items={summary.topIps || []} />
+            <HiddenMenuList title="Top countries" items={summary.topCountries || []} />
+            <div className="hiddenRecent">
+              <h4>Recent visits</h4>
+              {(summary.recent || []).slice(0, 12).map((visit) => (
+                <div className="hiddenRecentRow" key={`${visit.ts}-${visit.ip}-${visit.path}`}>
+                  <time>{formatRelativeTime(visit.ts)}</time>
+                  <strong title={visit.ip}>{visit.ip}</strong>
+                  <span>{visit.country || "??"}</span>
+                  <em title={visit.userAgent}>{visit.path}</em>
+                </div>
+              ))}
+              {(summary.recent || []).length === 0 && <p>No visits logged yet.</p>}
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function HiddenMenuList({ title, items }) {
+  return (
+    <div className="hiddenMenuList">
+      <h4>{title}</h4>
+      {items.slice(0, 8).map((item) => (
+        <div className="hiddenMenuListRow" key={item.label}>
+          <span title={item.label}>{item.label}</span>
+          <strong>{item.count}</strong>
+        </div>
+      ))}
+      {items.length === 0 && <p>No data.</p>}
+    </div>
   );
 }
 

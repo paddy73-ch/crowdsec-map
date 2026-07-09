@@ -102,6 +102,10 @@ environment:
 | `CTI_API_KEY` | Optional CrowdSec CTI API key for on-demand IP reputation checks |
 | `CTI_CACHE_FILE` | Persistent CTI cache file, default `data/cti-cache.json` |
 | `CTI_CACHE_HOURS` | CTI cache duration, default `72` |
+| `TRUST_PROXY` | Trust reverse proxy headers such as `X-Forwarded-For`, default `true` |
+| `ACCESS_LOG_ENABLED` | Optional demo visit logging, default `false` |
+| `ACCESS_LOG_FILE` | Persistent demo visit log file, default `data/access-log.jsonl` |
+| `ACCESS_LOG_RETENTION_DAYS` | Demo visit log retention, default `30` |
 
 ## Docker Image, Unraid, and Home Assistant
 

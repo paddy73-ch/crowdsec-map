@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import { readAccessSummary, recordAccessVisit } from "./accessLog.js";
 import { config } from "./config.js";
 import { readIpReputation, readReputationStats } from "./cti.js";
 import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
@@ -10,6 +11,7 @@ import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.set("trust proxy", config.trustProxy);
 
 app.get("/api/health", async (_request, response) => {
   const publicTargetIp = await readPublicTargetIp();
@@ -118,6 +120,11 @@ app.get("/api/reputation/ip/:ip", async (request, response) => {
 });
 
 const staticRoot = path.resolve(__dirname, "..", config.staticDir);
+app.get("/api/access-log/summary", async (request, response) => {
+  response.json(await readAccessSummary({ days: request.query.days }));
+});
+
+app.use(recordAccessVisit);
 app.use(express.static(staticRoot));
 app.get("*", (_request, response) => {
   response.sendFile(path.join(staticRoot, "index.html"));

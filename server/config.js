@@ -18,6 +18,10 @@ export const config = {
   ctiApiUrl: trimTrailingSlash(process.env.CTI_API_URL || "https://cti.api.crowdsec.net/v2"),
   ctiCacheFile: process.env.CTI_CACHE_FILE || "data/cti-cache.json",
   ctiCacheHours: Number(process.env.CTI_CACHE_HOURS || 72),
+  trustProxy: parseBoolean(process.env.TRUST_PROXY, true),
+  accessLogEnabled: parseBoolean(process.env.ACCESS_LOG_ENABLED, false),
+  accessLogFile: process.env.ACCESS_LOG_FILE || "data/access-log.jsonl",
+  accessLogRetentionDays: Number(process.env.ACCESS_LOG_RETENTION_DAYS || 30),
   staticDir: process.env.STATIC_DIR || "dist"
 };
 

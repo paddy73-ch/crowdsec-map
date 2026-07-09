@@ -99,6 +99,7 @@ select {
 
 .themeLight .toolbar button,
 .themeLight .historyRefresh,
+.themeLight .hiddenMenuTrigger,
 .themeLight .timelineControls button {
   border-color: rgba(39, 87, 82, 0.16);
   background: rgba(255, 255, 255, 0.82);
@@ -157,6 +158,25 @@ select {
 .themeLight .ipModal {
   border-color: rgba(39, 87, 82, 0.16);
   background: rgba(238, 247, 245, 0.98);
+}
+
+.themeLight .hiddenMenuModal {
+  border-color: rgba(39, 87, 82, 0.16);
+  background: rgba(238, 247, 245, 0.98);
+}
+
+.themeLight .hiddenMenuList,
+.themeLight .hiddenRecent {
+  border-color: rgba(39, 87, 82, 0.14);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.themeLight .hiddenMenuList p,
+.themeLight .hiddenRecent p,
+.themeLight .hiddenRecentRow time,
+.themeLight .hiddenRecentRow span,
+.themeLight .hiddenRecentRow em {
+  color: #58706c;
 }
 
 .themeLight .ipMetaGrid div,
@@ -489,6 +509,7 @@ p {
 }
 
 .toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -677,6 +698,31 @@ p {
 
 .toolbarLive .themeToggle {
   margin-right: 28px;
+}
+
+.toolbar .hiddenMenuTrigger {
+  position: absolute;
+  top: 76px;
+  right: 34px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  color: rgba(141, 163, 159, 0.72);
+  background: rgba(16, 32, 37, 0.62);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.toolbar .hiddenMenuTrigger:hover {
+  border-color: rgba(104, 221, 198, 0.28);
+  color: #68ddc6;
 }
 
 .toolbar .toolbarMenuTrigger {
@@ -1146,6 +1192,91 @@ p {
 
 .modalHeader button {
   width: 38px;
+}
+
+.hiddenMenuModal {
+  display: grid;
+  gap: 14px;
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid rgba(151, 181, 176, 0.18);
+  border-radius: 8px;
+  background: rgba(9, 18, 21, 0.96);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+.hiddenMenuContent {
+  display: grid;
+  gap: 12px;
+  padding: 0 18px 18px;
+}
+
+.hiddenMenuStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hiddenMenuList,
+.hiddenRecent {
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.hiddenMenuList h4,
+.hiddenRecent h4 {
+  margin: 0 0 10px;
+}
+
+.hiddenMenuList p,
+.hiddenRecent p {
+  margin: 0;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.hiddenMenuListRow,
+.hiddenRecentRow {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+  color: #d9e8e5;
+  font-size: 12px;
+}
+
+.hiddenMenuListRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.hiddenRecentRow {
+  grid-template-columns: 70px minmax(110px, 1fr) 42px minmax(0, 1.4fr);
+}
+
+.hiddenMenuListRow span,
+.hiddenRecentRow strong,
+.hiddenRecentRow em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hiddenMenuListRow strong {
+  color: #e8f3f1;
+}
+
+.hiddenRecentRow time,
+.hiddenRecentRow span,
+.hiddenRecentRow em {
+  color: #8da39f;
+  font-style: normal;
+}
+
+.hiddenRecentRow strong {
+  font-weight: 700;
 }
 
 .modalLoading {
