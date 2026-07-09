@@ -948,7 +948,7 @@ function InvestigationBlock({ ip, days }) {
               <strong>{investigation.totalHits}</strong>
             </div>
             <div>
-              <span>403 (Forbidden)</span>
+              <span>'403 (Forbidden)'</span>
               <strong>{investigation.totalForbidden}</strong>
             </div>
             <div title={buildActiveBanTitle(investigation.activeBans)}>
@@ -985,7 +985,7 @@ function InvestigationBlock({ ip, days }) {
                           Deep investigation
                         </button>
                       )}
-                      {source.hits} hits · {source.forbidden} 403 (Forbidden)
+                      {source.hits} hits · {source.forbidden} '403 (Forbidden)'
                     </span>
                   </summary>
                   {source.error && <div className="warning">{source.error}</div>}
@@ -1129,7 +1129,7 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
         {summary && (
           <div className="logLineMeta">
             <span>{summary.totalHits} hits</span>
-            <span>{summary.totalForbidden} 403 (Forbidden)</span>
+            <span>{summary.totalForbidden} '403 (Forbidden)'</span>
             <span>{summary.filteredHits} after filter</span>
             <span>showing {lines.length}</span>
           </div>
