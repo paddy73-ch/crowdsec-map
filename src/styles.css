@@ -1235,6 +1235,7 @@ p {
 
 .modalHeader p,
 .logModalMeta p,
+.logModalMeta span,
 .rawHeader p,
 .recentEvents p,
 .ipMetaGrid span {
@@ -1263,22 +1264,10 @@ p {
 }
 
 .logModalMeta {
-  display: grid;
-  gap: 8px;
-}
-
-.logBanSince {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  min-width: 0;
-  width: fit-content;
-}
-
-.logBanSince span {
-  color: #8da39f;
-  font-size: 12px;
-  white-space: nowrap;
 }
 
 .logModalMeta button {
