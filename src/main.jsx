@@ -1005,7 +1005,9 @@ function InvestigationBlock({ ip, days }) {
           activeBans={investigation?.activeBans}
           days={days}
           ip={ip}
+          sources={investigation?.sources || []}
           source={selectedSource}
+          onSelectSource={setSelectedSource}
           onClose={() => setSelectedSource(null)}
         />
       )}
@@ -1013,13 +1015,14 @@ function InvestigationBlock({ ip, days }) {
   );
 }
 
-function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
+function InvestigationLogModal({ ip, days, source, sources, activeBans, onSelectSource, onClose }) {
   const [lines, setLines] = useState([]);
   const [summary, setSummary] = useState(null);
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("newest");
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
+  const [timestampWarning, setTimestampWarning] = useState(null);
   const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1055,6 +1058,7 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
   useEffect(() => {
     setLines([]);
     setNextOffset(0);
+    setTimestampWarning(null);
     loadLines({ offset: 0, reset: true });
   }, [appliedSearch, filter, loadLines, sort, source.path]);
 
@@ -1074,9 +1078,31 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
   };
   const banSinceSearch = activeBans?.since ? formatBanSinceExact(activeBans.since) : "";
 
-  const applyBanSinceSearch = () => {
+  const applyBanSinceSearch = ({ force = false } = {}) => {
+    const warning = buildZoraxyTimestampWarning(source, sources, banSinceSearch);
+    if (warning && !force) {
+      setTimestampWarning(warning);
+      return;
+    }
+    setTimestampWarning(null);
     setSearch(banSinceSearch);
     setAppliedSearch(banSinceSearch);
+  };
+
+  const openMatchingZoraxyLog = () => {
+    if (!timestampWarning?.matchingSource) {
+      return;
+    }
+    setTimestampWarning(null);
+    setSearch(banSinceSearch);
+    setAppliedSearch(banSinceSearch);
+    onSelectSource(timestampWarning.matchingSource);
+  };
+
+  const clearTimestampSearch = () => {
+    setTimestampWarning(null);
+    setSearch("");
+    setAppliedSearch("");
   };
 
   return (
@@ -1090,7 +1116,7 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
               {banSinceSearch && (
                 <>
                   <span>· ban since: {banSinceSearch}</span>
-                  <button type="button" onClick={applyBanSinceSearch}>
+                  <button type="button" onClick={() => applyBanSinceSearch()}>
                     Use timestamp
                   </button>
                 </>
@@ -1101,6 +1127,28 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
             <X size={18} />
           </button>
         </header>
+
+        {timestampWarning && (
+          <div className="logTimestampWarning" role="alert">
+            <div>
+              <strong>Timestamp does not match this Zoraxy log.</strong>
+              <span>{timestampWarning.message}</span>
+            </div>
+            <div>
+              {timestampWarning.matchingSource && (
+                <button type="button" onClick={openMatchingZoraxyLog}>
+                  Open {timestampWarning.matchingSource.name}
+                </button>
+              )}
+              <button type="button" onClick={() => applyBanSinceSearch({ force: true })}>
+                Filter anyway
+              </button>
+              <button type="button" onClick={clearTimestampSearch}>
+                Clear timestamp
+              </button>
+            </div>
+          </div>
+        )}
 
         <form className="logLineControls" onSubmit={applySearch}>
           <label>
@@ -1161,6 +1209,62 @@ function clampLineLimit(value) {
     return 50;
   }
   return Math.max(1, Math.min(200, Math.round(number)));
+}
+
+function buildZoraxyTimestampWarning(source, sources, timestamp) {
+  const sourceMonth = parseZoraxyLogMonth(source?.name);
+  const timestampMonth = parseTimestampMonth(timestamp);
+  if (!sourceMonth || !timestampMonth || sourceMonth.key === timestampMonth.key) {
+    return null;
+  }
+
+  const matchingSource = sources.find((candidate) => parseZoraxyLogMonth(candidate.name)?.key === timestampMonth.key);
+  const message = matchingSource
+    ? `The timestamp is from ${formatYearMonth(timestampMonth)}, but ${source.name} is ${formatYearMonth(sourceMonth)}.`
+    : `The timestamp is from ${formatYearMonth(timestampMonth)}, but ${source.name} is ${formatYearMonth(sourceMonth)}. No matching Zoraxy log was found.`;
+
+  return {
+    message,
+    matchingSource
+  };
+}
+
+function parseZoraxyLogMonth(name) {
+  const match = String(name || "").match(/^zr_(\d{4})-(\d{1,2})\.log$/i);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null;
+  }
+  return {
+    year,
+    month,
+    key: year * 100 + month
+  };
+}
+
+function parseTimestampMonth(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-\d{2}/);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null;
+  }
+  return {
+    year,
+    month,
+    key: year * 100 + month
+  };
+}
+
+function formatYearMonth(value) {
+  return `${value.year}-${String(value.month).padStart(2, "0")}`;
 }
 
 function formatBanSince(value) {

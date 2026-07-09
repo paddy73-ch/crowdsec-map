@@ -54,7 +54,7 @@ export async function readIpInvestigation(ip, options = {}) {
     maxLines,
     maxSampleLines: MAX_SAMPLE_LINES,
     timedOut,
-    sources: sources.sort((a, b) => b.hits - a.hits || a.name.localeCompare(b.name)),
+    sources: sources.sort(compareInvestigationSources),
     warning: buildWarning(configuredPaths, files, timedOut)
   };
 }
@@ -260,6 +260,41 @@ async function expandLogFiles(patterns) {
   }
 
   return [...new Set(files)].sort((a, b) => a.localeCompare(b));
+}
+
+function compareInvestigationSources(a, b) {
+  const aZoraxy = parseZoraxyLogMonth(a.name);
+  const bZoraxy = parseZoraxyLogMonth(b.name);
+
+  if (aZoraxy && bZoraxy) {
+    return bZoraxy.sortKey - aZoraxy.sortKey || a.name.localeCompare(b.name);
+  }
+  if (aZoraxy) {
+    return -1;
+  }
+  if (bZoraxy) {
+    return 1;
+  }
+  return b.hits - a.hits || a.name.localeCompare(b.name);
+}
+
+function parseZoraxyLogMonth(name) {
+  const match = String(name || "").match(/^zr_(\d{4})-(\d{1,2})\.log$/i);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null;
+  }
+
+  return {
+    year,
+    month,
+    sortKey: year * 100 + month
+  };
 }
 
 async function expandSimpleGlob(pattern) {

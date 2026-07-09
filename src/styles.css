@@ -275,9 +275,24 @@ select {
 .themeLight .logLineControls,
 .themeLight .logLineMeta,
 .themeLight .logLineList,
-.themeLight .logLineFooter {
+.themeLight .logLineFooter,
+.themeLight .logTimestampWarning {
   border-color: rgba(39, 87, 82, 0.14);
   background: rgba(255, 255, 255, 0.76);
+}
+
+.themeLight .logTimestampWarning strong {
+  color: #8b5b00;
+}
+
+.themeLight .logTimestampWarning span {
+  color: #58706c;
+}
+
+.themeLight .logTimestampWarning button {
+  color: #5d3f00;
+  border-color: rgba(139, 91, 0, 0.18);
+  background: rgba(255, 214, 128, 0.35);
 }
 
 .themeLight .logLineControls label {
@@ -1669,6 +1684,54 @@ p {
   background: rgba(14, 28, 32, 0.72);
 }
 
+.logTimestampWarning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 199, 105, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 199, 105, 0.09);
+}
+
+.logTimestampWarning div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.logTimestampWarning div:first-child {
+  flex-wrap: wrap;
+}
+
+.logTimestampWarning strong {
+  color: #ffd079;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.logTimestampWarning span {
+  color: #b4c8c4;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.logTimestampWarning button {
+  min-height: 28px;
+  border: 1px solid rgba(255, 199, 105, 0.26);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #ffe0a3;
+  background: rgba(255, 199, 105, 0.1);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 .logLineControls label {
   display: grid;
   gap: 5px;
@@ -2297,6 +2360,15 @@ p {
 
   .logLineControls {
     grid-template-columns: 1fr;
+  }
+
+  .logTimestampWarning {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .logTimestampWarning div {
+    flex-wrap: wrap;
   }
 
   .logLineRow {
