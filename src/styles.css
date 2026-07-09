@@ -217,6 +217,7 @@ select {
 .themeLight .investigationRunControls input,
 .themeLight .investigationHeader button,
 .themeLight .investigationSources summary button,
+.themeLight .logModalMeta button,
 .themeLight .logLineControls input,
 .themeLight .logLineControls select,
 .themeLight .logLineControls button,
@@ -1233,6 +1234,7 @@ p {
 }
 
 .modalHeader p,
+.logModalMeta p,
 .rawHeader p,
 .recentEvents p,
 .ipMetaGrid span {
@@ -1242,6 +1244,7 @@ p {
 }
 
 .modalHeader button,
+.logModalMeta button,
 .rawActions button {
   display: inline-flex;
   align-items: center;
@@ -1257,6 +1260,22 @@ p {
 
 .modalHeader button {
   width: 38px;
+}
+
+.logModalMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.logModalMeta button {
+  min-height: 26px;
+  padding: 0 8px;
+  color: #68ddc6;
+  background: rgba(104, 221, 198, 0.09);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .hiddenMenuModal {

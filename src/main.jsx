@@ -982,7 +982,7 @@ function InvestigationBlock({ ip, days }) {
                           event.stopPropagation();
                           setSelectedSource(source);
                         }}>
-                          See all
+                          Deep investigation
                         </button>
                       )}
                       {source.hits} hits · {source.forbidden} 403 (Forbidden)
@@ -1072,6 +1072,12 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
     event.preventDefault();
     setAppliedSearch(search.trim());
   };
+  const banSinceSearch = activeBans?.since ? formatBanSinceExact(activeBans.since) : "";
+
+  const applyBanSinceSearch = () => {
+    setSearch(banSinceSearch);
+    setAppliedSearch(banSinceSearch);
+  };
 
   return (
     <div className="modalBackdrop" role="presentation" onClick={onClose}>
@@ -1079,10 +1085,17 @@ function InvestigationLogModal({ ip, days, source, activeBans, onClose }) {
         <header className="modalHeader">
           <div>
             <h3 id="investigation-log-title">{source.name}</h3>
-            <p>
-              {ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines
-              {activeBans?.since ? ` · ban since: ${formatBanSinceExact(activeBans.since)}` : ""}
-            </p>
+            <div className="logModalMeta">
+              <p>
+                {ip} · {days}d window · {summary?.filteredHits ?? source.hits} matching lines
+                {banSinceSearch ? ` · ban since: ${banSinceSearch}` : ""}
+              </p>
+              {banSinceSearch && (
+                <button type="button" onClick={applyBanSinceSearch}>
+                  Use timestamp
+                </button>
+              )}
+            </div>
           </div>
           <button type="button" onClick={onClose} title="Close" aria-label="Close">
             <X size={18} />
