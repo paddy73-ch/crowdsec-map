@@ -961,7 +961,7 @@ function InvestigationBlock({ ip, days }) {
             </div>
             <div title={buildActiveBanTitle(investigation.activeBans)}>
               <span>Remaining</span>
-              <strong>{investigation.activeBans?.remaining || "none"}{investigation.activeBans?.remaining ? " left" : ""}</strong>
+              <strong>{formatBanRemaining(investigation.activeBans?.remaining)}</strong>
             </div>
             <div>
               <span>Files</span>
@@ -1147,7 +1147,31 @@ function clampLineLimit(value) {
 }
 
 function formatBanSince(value) {
-  return value ? formatRelativeTime(value) : "none";
+  if (!value) {
+    return "none";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return [
+    date.getFullYear(),
+    pad2(date.getMonth() + 1),
+    pad2(date.getDate())
+  ].join("-") + ` ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function formatBanRemaining(value) {
+  const seconds = parseDurationSeconds(value);
+  if (!Number.isFinite(seconds)) {
+    return value ? `${value} left` : "none";
+  }
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}h ${pad2(minutes)}m left`;
 }
 
 function buildActiveBanTitle(activeBans) {
@@ -1162,11 +1186,39 @@ function buildActiveBanTitle(activeBans) {
       `ID ${ban.id}`,
       ban.scenario,
       ban.origin && `origin ${ban.origin}`,
-      ban.createdAt && `since ${ban.createdAt}`,
-      ban.duration && `remaining ${ban.duration}`,
+      ban.createdAt && `since ${formatBanSince(ban.createdAt)} (${ban.createdAt})`,
+      ban.duration && `remaining ${formatBanRemaining(ban.duration)} (${ban.duration})`,
       ban.until && `until ${ban.until}`
     ].filter(Boolean).join(" · "))
     .join("\n");
+}
+
+function parseDurationSeconds(value) {
+  const text = String(value || "");
+  if (!text) {
+    return NaN;
+  }
+
+  let seconds = 0;
+  const regex = /(\d+)\s*(d|h|m|s)/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const amount = Number(match[1]);
+    if (match[2] === "d") {
+      seconds += amount * 86400;
+    } else if (match[2] === "h") {
+      seconds += amount * 3600;
+    } else if (match[2] === "m") {
+      seconds += amount * 60;
+    } else {
+      seconds += amount;
+    }
+  }
+  return seconds || NaN;
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
 }
 
 function IpLookupBlock({ ip }) {
