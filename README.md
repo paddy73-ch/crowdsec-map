@@ -108,7 +108,7 @@ environment:
 | `ACCESS_LOG_FILE` | Persistent demo visit log file, default `data/access-log.jsonl` |
 | `ACCESS_LOG_RETENTION_DAYS` | Demo visit log retention, default `30` |
 | `INVESTIGATION_LOG_PATHS` | Comma, semicolon, or newline separated log paths/globs for IP investigation |
-| `INVESTIGATION_MAX_LINES` | Sample lines kept per investigation log source, default `12` |
+| `INVESTIGATION_MAX_LINES` | Default sample lines kept per investigation log source, default `50`, UI limit `1-200` |
 | `INVESTIGATION_TIMEOUT_MS` | Maximum server-side investigation scan time, default `8000` |
 
 ## IP Investigation

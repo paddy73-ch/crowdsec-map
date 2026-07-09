@@ -127,7 +127,10 @@ app.get("/api/investigation/ip/:ip", async (request, response) => {
   }
 
   try {
-    response.json(await readIpInvestigation(request.params.ip, { days: request.query.days }));
+    response.json(await readIpInvestigation(request.params.ip, {
+      days: request.query.days,
+      maxLines: request.query.maxLines
+    }));
   } catch (error) {
     response.status(500).json({ error: error.message });
   }

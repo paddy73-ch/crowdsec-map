@@ -214,6 +214,7 @@ select {
 .themeLight .rawActions button,
 .themeLight .lookupActions button,
 .themeLight .lookupActions a,
+.themeLight .investigationRunControls input,
 .themeLight .investigationHeader button,
 .themeLight .ctiActions button,
 .themeLight .ctiActions a {
@@ -252,6 +253,12 @@ select {
 
 .themeLight .investigationSources summary span {
   color: #40645f;
+}
+
+.themeLight .investigationRunControls label {
+  color: #58706c;
+  border-color: rgba(39, 87, 82, 0.16);
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .themeLight .investigationSources pre {
@@ -1441,6 +1448,35 @@ p {
   margin: 4px 0 0;
   color: #8da39f;
   font-size: 12px;
+}
+
+.investigationRunControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.investigationRunControls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 9px;
+  color: #8da39f;
+  background: #102025;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.investigationRunControls input {
+  width: 58px;
+  border: 0;
+  color: #e8f3f1;
+  background: transparent;
+  font: inherit;
+  outline: none;
 }
 
 .investigationHeader button {

@@ -7,6 +7,7 @@ import { isIpAddress } from "./history.js";
 
 const MAX_INVESTIGATION_DAYS = 180;
 const MAX_LINE_LENGTH = 700;
+const MAX_SAMPLE_LINES = 200;
 
 export async function readIpInvestigation(ip, options = {}) {
   if (!isIpAddress(ip)) {
@@ -16,7 +17,7 @@ export async function readIpInvestigation(ip, options = {}) {
   const days = clampNumber(options.days, 7, 1, MAX_INVESTIGATION_DAYS);
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
   const deadline = Date.now() + Math.max(1000, config.investigationTimeoutMs);
-  const maxLines = clampNumber(config.investigationMaxLines, 12, 0, 100);
+  const maxLines = clampNumber(options.maxLines, config.investigationMaxLines, 1, MAX_SAMPLE_LINES);
   const configuredPaths = config.investigationLogPaths;
   const files = await expandLogFiles(configuredPaths);
   const sources = [];
@@ -46,6 +47,8 @@ export async function readIpInvestigation(ip, options = {}) {
     scannedFiles: sources.length,
     totalHits,
     totalForbidden,
+    maxLines,
+    maxSampleLines: MAX_SAMPLE_LINES,
     timedOut,
     sources: sources.sort((a, b) => b.hits - a.hits || a.name.localeCompare(b.name)),
     warning: buildWarning(configuredPaths, files, timedOut)
@@ -195,7 +198,8 @@ function buildWarning(configuredPaths, files, timedOut) {
 function clampNumber(value, fallback, min, max) {
   const number = Number(value);
   if (!Number.isFinite(number)) {
-    return fallback;
+    const fallbackNumber = Number(fallback);
+    return Number.isFinite(fallbackNumber) ? Math.max(min, Math.min(max, Math.round(fallbackNumber))) : min;
   }
   return Math.max(min, Math.min(max, Math.round(number)));
 }

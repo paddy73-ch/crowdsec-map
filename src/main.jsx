@@ -879,12 +879,16 @@ function InvestigationBlock({ ip, days }) {
   const [investigation, setInvestigation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lineLimit, setLineLimit] = useState(50);
 
   const loadInvestigation = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const params = new URLSearchParams({ days: String(days) });
+      const params = new URLSearchParams({
+        days: String(days),
+        maxLines: String(clampLineLimit(lineLimit))
+      });
       const response = await fetch(`/api/investigation/ip/${encodeURIComponent(ip)}?${params}`);
       const payload = await response.json();
       if (!response.ok) {
@@ -896,7 +900,7 @@ function InvestigationBlock({ ip, days }) {
     } finally {
       setLoading(false);
     }
-  }, [days, ip]);
+  }, [days, ip, lineLimit]);
 
   useEffect(() => {
     setInvestigation(null);
@@ -910,9 +914,24 @@ function InvestigationBlock({ ip, days }) {
           <h4><Search size={15} /> Investigation</h4>
           <p>Checks configured host logs for this IP in the selected {days}d window.</p>
         </div>
-        <button type="button" onClick={loadInvestigation} disabled={loading}>
-          <RefreshCcw size={14} className={loading ? "spin" : ""} /> Run
-        </button>
+        <div className="investigationRunControls">
+          <label>
+            <span>Lines</span>
+            <input
+              type="number"
+              min="1"
+              max="200"
+              step="1"
+              value={lineLimit}
+              onChange={(event) => setLineLimit(event.target.value)}
+              onBlur={() => setLineLimit(clampLineLimit(lineLimit))}
+              aria-label="Investigation sample lines"
+            />
+          </label>
+          <button type="button" onClick={loadInvestigation} disabled={loading}>
+            <RefreshCcw size={14} className={loading ? "spin" : ""} /> Run
+          </button>
+        </div>
       </div>
 
       {error && <div className="warning">investigation: {error}</div>}
@@ -928,7 +947,7 @@ function InvestigationBlock({ ip, days }) {
               <strong>{investigation.totalHits}</strong>
             </div>
             <div>
-              <span>403</span>
+              <span>403 (Forbidden)</span>
               <strong>{investigation.totalForbidden}</strong>
             </div>
             <div>
@@ -943,7 +962,7 @@ function InvestigationBlock({ ip, days }) {
                 <details key={source.path} open={source.hits > 0}>
                   <summary>
                     <strong title={source.path}>{source.name}</strong>
-                    <span>{source.hits} hits · {source.forbidden} 403</span>
+                    <span>{source.hits} hits · {source.forbidden} 403 (Forbidden)</span>
                   </summary>
                   {source.error && <div className="warning">{source.error}</div>}
                   {source.sampledLines.length > 0 ? (
@@ -959,6 +978,14 @@ function InvestigationBlock({ ip, days }) {
       )}
     </div>
   );
+}
+
+function clampLineLimit(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return 50;
+  }
+  return Math.max(1, Math.min(200, Math.round(number)));
 }
 
 function IpLookupBlock({ ip }) {

@@ -31,7 +31,7 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `ACCESS_LOG_FILE`: `/app/data/access-log.jsonl`
 - `ACCESS_LOG_RETENTION_DAYS`: `30`
 - `INVESTIGATION_LOG_PATHS`: optional log paths or globs for the IP Investigation panel.
-- `INVESTIGATION_MAX_LINES`: sampled lines per log source, default `12`.
+- `INVESTIGATION_MAX_LINES`: default sampled lines per log source, default `50`, UI limit `1-200`.
 - `INVESTIGATION_TIMEOUT_MS`: maximum scan time, default `8000`.
 - Docker socket mount is optional but required when using `cscli` via `CROWDSEC_CONTAINER`.
 - LAPI mode avoids Docker socket access and is preferred when you have watcher or bouncer credentials.
