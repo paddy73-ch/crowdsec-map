@@ -41,8 +41,17 @@ export async function readCrowdSecData(requestedSource = config.dataSource) {
 
 export async function readActiveBans() {
   const command = config.crowdsecContainer
-    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "decisions", "list", "-o", "json"]]
-    : ["cscli", ["decisions", "list", "-o", "json"]];
+    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "decisions", "list", "-o", "raw", "--limit", "0"]]
+    : ["cscli", ["decisions", "list", "-o", "raw", "--limit", "0"]];
+
+  const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
+  return normalizeActiveBansRaw(stdout);
+}
+
+export async function readActiveBansForIp(ip) {
+  const command = config.crowdsecContainer
+    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "decisions", "list", "-o", "json", "--ip", ip, "--limit", "0"]]
+    : ["cscli", ["decisions", "list", "-o", "json", "--ip", ip, "--limit", "0"]];
 
   const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
   return normalizeActiveBans(JSON.parse(stdout));
@@ -50,8 +59,8 @@ export async function readActiveBans() {
 
 export async function readCscliIpDetails(ip) {
   const command = config.crowdsecContainer
-    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "alerts", "list", "-o", "human", "--ip", ip]]
-    : ["cscli", ["alerts", "list", "-o", "human", "--ip", ip]];
+    ? ["docker", ["exec", config.crowdsecContainer, "cscli", "alerts", "list", "-o", "human", "--ip", ip, "--limit", "0"]]
+    : ["cscli", ["alerts", "list", "-o", "human", "--ip", ip, "--limit", "0"]];
 
   const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
   return stdout.trim();
@@ -166,6 +175,93 @@ function normalizeActiveBans(payload) {
   });
 
   return [...byIp.values()].sort((a, b) => a.ip.localeCompare(b.ip));
+}
+
+function normalizeActiveBansRaw(output) {
+  const lines = String(output || "").trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
+  const indexOf = (name) => headers.indexOf(name);
+  const indexes = {
+    id: indexOf("id"),
+    source: indexOf("source"),
+    value: indexOf("ip"),
+    reason: indexOf("reason"),
+    action: indexOf("action"),
+    country: indexOf("country"),
+    as: indexOf("as"),
+    expiration: indexOf("expiration"),
+    simulated: indexOf("simulated")
+  };
+
+  const bans = [];
+  for (const line of lines.slice(1)) {
+    const fields = parseCsvLine(line);
+    const action = fields[indexes.action] || "";
+    const simulated = fields[indexes.simulated] || "";
+    if (action !== "ban" || simulated === "true") {
+      continue;
+    }
+
+    const scopedValue = fields[indexes.value] || "";
+    const [scope, value] = scopedValue.includes(":") ? scopedValue.split(/:(.*)/, 2) : ["Ip", scopedValue];
+    if (!value) {
+      continue;
+    }
+
+    bans.push({
+      id: fields[indexes.id] || value,
+      ip: value,
+      country: fields[indexes.country] || "",
+      as: fields[indexes.as] || "",
+      scenario: String(fields[indexes.reason] || "ban").replace(/^crowdsecurity\//, ""),
+      duration: fields[indexes.expiration] || "",
+      createdAt: "",
+      until: "",
+      origin: fields[indexes.source] || "",
+      scope: scope || "Ip"
+    });
+  }
+
+  const byIp = new Map();
+  bans.forEach((ban) => {
+    if (!byIp.has(ban.ip)) {
+      byIp.set(ban.ip, ban);
+    }
+  });
+
+  return [...byIp.values()].sort((a, b) => a.ip.localeCompare(b.ip));
+}
+
+function parseCsvLine(line) {
+  const fields = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+    if (char === '"' && quoted && next === '"') {
+      field += '"';
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (char === "," && !quoted) {
+      fields.push(field);
+      field = "";
+      continue;
+    }
+    field += char;
+  }
+  fields.push(field);
+  return fields;
 }
 
 async function getWatcherToken() {

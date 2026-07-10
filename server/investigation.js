@@ -4,7 +4,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { config } from "./config.js";
 import { isIpAddress } from "./history.js";
-import { readActiveBans } from "./sources.js";
+import { readActiveBansForIp } from "./sources.js";
 
 const MAX_INVESTIGATION_DAYS = 180;
 const MAX_LINE_LENGTH = 700;
@@ -61,8 +61,7 @@ export async function readIpInvestigation(ip, options = {}) {
 
 async function readActiveBanSummary(ip) {
   try {
-    const bans = (await readActiveBans())
-      .filter((ban) => ban.ip === ip)
+    const bans = (await readActiveBansForIp(ip))
       .sort((a, b) => toTimestamp(a.createdAt) - toTimestamp(b.createdAt));
 
     return {
