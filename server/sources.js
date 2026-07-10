@@ -7,7 +7,7 @@ import { sampleAlerts } from "./sampleData.js";
 const execFileAsync = promisify(execFile);
 let tokenCache = null;
 const lapiHeaders = {
-  "User-Agent": "crowdsec-map/v0.1"
+  "User-Agent": "crowdsec-map/v0.1.1"
 };
 
 export async function readCrowdSecData(requestedSource = config.dataSource) {
