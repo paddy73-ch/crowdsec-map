@@ -23,17 +23,13 @@ function normalizeItem(item, index) {
   const geo = resolveGeo(source, ip);
   const createdAt = item.created_at || item.start_at || item.until || item.createdAt || item.created || new Date().toISOString();
 
-  if (!geo.latitude || !geo.longitude) {
-    return null;
-  }
-
   return {
     id: String(item.id || item.alert_id || firstDecision.id || `${ip}-${createdAt}-${index}`),
     ip,
-    country: geo.country || "??",
+    country: geo.country || source.cn || source.country || source.country_code || "",
     city: geo.city || "",
-    latitude: Number(geo.latitude),
-    longitude: Number(geo.longitude),
+    latitude: toCoordinate(geo.latitude),
+    longitude: toCoordinate(geo.longitude),
     scenario,
     decisionType: firstDecision.type || item.decisionType || item.type || item.decision_type || "alert",
     value: firstDecision.value || item.value || ip,
@@ -44,8 +40,8 @@ function normalizeItem(item, index) {
 }
 
 function resolveGeo(source, ip) {
-  const latitude = Number(source.latitude || source.lat);
-  const longitude = Number(source.longitude || source.lon || source.lng);
+  const latitude = toCoordinate(source.latitude ?? source.lat);
+  const longitude = toCoordinate(source.longitude ?? source.lon ?? source.lng);
 
   if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
     return {
@@ -67,6 +63,14 @@ function resolveGeo(source, ip) {
     country: lookup.country,
     city: lookup.city
   };
+}
+
+function toCoordinate(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const coordinate = Number(value);
+  return Number.isFinite(coordinate) ? coordinate : null;
 }
 
 function buildTotals(alerts) {

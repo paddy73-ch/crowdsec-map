@@ -28,6 +28,7 @@ const MAX_MAP_POINTS = 180;
 const MAX_SIGNAL_PATHS = 30;
 const MAX_TIMELINE_COLUMNS = 9;
 const MAX_TIMELINE_ROWS = 3;
+const METRIC_PAGE_SIZE = 50;
 const TIMELINE_MIN_CARD_WIDTH = 132;
 const TIMELINE_GAP = 10;
 const RANK_MODES = [
@@ -58,6 +59,8 @@ function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [metricMode, setMetricMode] = useState("");
+  const [selectedIp, setSelectedIp] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -97,7 +100,7 @@ function App() {
 
   return (
     <main className={`appShell theme${theme === "light" ? "Light" : "Dark"}`}>
-      <Sidebar data={data} totals={totals} />
+      <Sidebar data={data} totals={totals} onOpenMetric={setMetricMode} />
       <section className="mapStage">
         <Toolbar
           view={view}
@@ -124,11 +127,23 @@ function App() {
         )}
         {hiddenMenuOpen && <HiddenMenuModal onClose={() => setHiddenMenuOpen(false)} />}
       </section>
+      {metricMode && (
+        <MetricDrilldownModal
+          data={data}
+          initialMode={metricMode}
+          onClose={() => setMetricMode("")}
+          onSelectIp={(ip) => {
+            setMetricMode("");
+            setSelectedIp(ip);
+          }}
+        />
+      )}
+      {selectedIp && <IpDetailModal ip={selectedIp} days={7} onClose={() => setSelectedIp("")} />}
     </main>
   );
 }
 
-function Sidebar({ data, totals }) {
+function Sidebar({ data, totals, onOpenMetric }) {
   const rankings = useMemo(() => buildRankings(data?.alerts || [], data?.activeBans || []), [data?.alerts, data?.activeBans]);
 
   return (
@@ -142,10 +157,10 @@ function Sidebar({ data, totals }) {
       </div>
 
       <div className="metricGrid">
-        <Metric icon={<ShieldAlert />} label="Active Bans" value={totals.activeBans || 0} />
-        <Metric icon={<Activity />} label="Alerts" value={totals.alerts || 0} />
-        <Metric icon={<Globe2 />} label="Countries" value={totals.countries || 0} />
-        <Metric icon={<Crosshair />} label="Scenarios" value={totals.scenarios || 0} />
+        <Metric icon={<ShieldAlert />} label="Active Bans" value={totals.activeBans || 0} onClick={() => onOpenMetric("bans")} />
+        <Metric icon={<Activity />} label="Alerts" value={totals.alerts || 0} onClick={() => onOpenMetric("alerts")} />
+        <Metric icon={<Globe2 />} label="Countries" value={totals.countries || 0} onClick={() => onOpenMetric("countries")} />
+        <Metric icon={<Crosshair />} label="Scenarios" value={totals.scenarios || 0} onClick={() => onOpenMetric("scenarios")} />
       </div>
 
       <Panel rankings={rankings} initialMode="countries" storageKey="top" />
@@ -155,12 +170,85 @@ function Sidebar({ data, totals }) {
   );
 }
 
-function Metric({ icon, label, value }) {
-  return (
-    <div className="metric">
+function Metric({ icon, label, value, onClick }) {
+  const content = (
+    <>
       {React.cloneElement(icon, { size: 18 })}
       <span>{label}</span>
       <strong>{value}</strong>
+    </>
+  );
+  return onClick ? <button type="button" className="metric metricButton" onClick={onClick} title={`Open ${label}`}>{content}</button> : <div className="metric">{content}</div>;
+}
+
+function MetricDrilldownModal({ data, initialMode, onClose, onSelectIp }) {
+  const [mode, setMode] = useState(initialMode);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [alertFilter, setAlertFilter] = useState(null);
+  const alerts = data?.alerts || EMPTY_RANK_ITEMS;
+  const bans = data?.activeBans || EMPTY_RANK_ITEMS;
+  const grouped = useMemo(() => ({ countries: groupCounts(alerts, "country"), scenarios: groupCounts(alerts, "scenario") }), [alerts]);
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (mode === "bans") {
+      return bans.filter((item) => [item.ip, item.country, item.scenario, item.duration].some((value) => String(value || "").toLowerCase().includes(needle)));
+    }
+    if (mode === "countries" || mode === "scenarios") {
+      return grouped[mode].filter((item) => item.label.toLowerCase().includes(needle));
+    }
+    return alerts.filter((item) => {
+      if (alertFilter && String(item[alertFilter.field] || "unknown") !== alertFilter.value) return false;
+      return [item.ip, item.country, item.scenario, item.createdAt].some((value) => String(value || "").toLowerCase().includes(needle));
+    });
+  }, [alertFilter, alerts, bans, grouped, mode, query]);
+  const pageCount = Math.max(1, Math.ceil(rows.length / METRIC_PAGE_SIZE));
+  const visibleRows = rows.slice(page * METRIC_PAGE_SIZE, (page + 1) * METRIC_PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(0);
+  }, [mode, query, alertFilter]);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  const openGroup = (field, value) => {
+    setAlertFilter({ field, value });
+    setMode("alerts");
+    setQuery("");
+  };
+
+  return (
+    <div className="modalBackdrop" role="presentation" onClick={onClose}>
+      <section className="ipModal metricModal" role="dialog" aria-modal="true" aria-labelledby="metric-detail-title" onClick={(event) => event.stopPropagation()}>
+        <header className="modalHeader">
+          <div><h3 id="metric-detail-title">Live security details</h3><p>{rows.length} matching entries · {data?.source || "unknown"}</p></div>
+          <button type="button" onClick={onClose} title="Close" aria-label="Close"><X size={18} /></button>
+        </header>
+        <div className="metricModalToolbar">
+          <div className="segmented wide" role="group" aria-label="Metric detail mode">
+            {[['bans', 'Active Bans'], ['alerts', 'Alerts'], ['countries', 'Countries'], ['scenarios', 'Scenarios']].map(([value, label]) => (
+              <button type="button" className={mode === value ? "active" : ""} key={value} onClick={() => { setMode(value); setAlertFilter(null); }}>{label}</button>
+            ))}
+          </div>
+          <label className="metricSearch"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search IP, country or scenario" /></label>
+        </div>
+        {alertFilter && <button type="button" className="filterChip" onClick={() => setAlertFilter(null)}>{alertFilter.value} <X size={13} /></button>}
+        <div className="metricResultList">
+          {visibleRows.map((item, index) => {
+            if (mode === "countries" || mode === "scenarios") {
+              return <button type="button" className="metricResultRow groupResult" key={item.label} onClick={() => openGroup(mode === "countries" ? "country" : "scenario", item.label)}><strong>{item.label || "unknown"}</strong><span>{item.count} log events</span></button>;
+            }
+            const ip = item.ip || item.value || "";
+            return <button type="button" className="metricResultRow" key={`${item.id || ip}-${index}`} onClick={() => ip && onSelectIp(ip)} disabled={!ip}><time>{formatRelativeTime(item.createdAt)}</time><strong>{ip || "No IP"}</strong><span>{item.country || "??"}</span><span title={item.scenario}>{item.scenario || "unknown"}</span>{mode === "bans" ? <em>{item.duration || "active"}</em> : <em>{item.count || 1} events</em>}</button>;
+          })}
+          {visibleRows.length === 0 && <p className="metricEmpty">No matching entries.</p>}
+        </div>
+        <footer className="metricPager"><button type="button" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>Previous</button><span>Page {page + 1} / {pageCount}</span><button type="button" disabled={page + 1 >= pageCount} onClick={() => setPage((value) => value + 1)}>Next</button></footer>
+      </section>
     </div>
   );
 }
@@ -590,7 +678,7 @@ function HistoryView() {
 
       <div className="historySummary">
         <Metric icon={<BarChart3 />} label="Groups" value={history?.items?.length || 0} />
-        <Metric icon={<Activity />} label="Events" value={history?.matchedEvents || 0} />
+        <Metric icon={<Activity />} label="Alerts" value={history?.matchedEvents || 0} />
         <Metric icon={<Timer />} label="Window" value={`${history?.days || days}d`} />
       </div>
 
@@ -608,7 +696,7 @@ function HistoryView() {
               <tr>
                 <th>{getHistoryGroupLabel(groupBy)}</th>
                 <th>Days</th>
-                <th>Alerts</th>
+                <th>Log events</th>
                 <th>IPs</th>
                 <th>Last seen</th>
                 <th>Top scenario</th>
@@ -731,7 +819,7 @@ function GroupDetailModal({ group, days, onClose, onSelectIp }) {
           <>
             <div className="ipSummaryGrid">
               <Metric icon={<BarChart3 />} label="IPs" value={detail.items.length || 0} />
-              <Metric icon={<Activity />} label="Events" value={detail.matchedEvents || 0} />
+              <Metric icon={<Activity />} label="Alerts" value={detail.matchedEvents || 0} />
               <Metric icon={<Timer />} label="Window" value={`${detail.days}d`} />
             </div>
 
@@ -745,7 +833,7 @@ function GroupDetailModal({ group, days, onClose, onSelectIp }) {
                       <strong>{item.ip}</strong>
                       <i style={{ width: `${Math.max(4, (item.alerts / maxAlerts) * 100)}%` }} />
                     </span>
-                    <em>{item.alerts} alerts</em>
+                    <em>{item.alerts} log events</em>
                     <small>{item.daysSeen}/{detail.days} days</small>
                     <small title={item.topScenario}>{item.topScenario}</small>
                     <small>{item.topCountry}</small>
@@ -836,8 +924,8 @@ function IpDetailModal({ ip, days, onClose }) {
         {!loading && detail && (
           <>
             <div className="ipSummaryGrid">
-              <Metric icon={<Activity />} label="Alerts" value={detail.alerts || 0} />
-              <Metric icon={<BarChart3 />} label="Events" value={detail.events || 0} />
+              <Metric icon={<Activity />} label="Log Events" value={detail.alerts || 0} />
+              <Metric icon={<BarChart3 />} label="Alerts" value={detail.events || 0} />
               <Metric icon={<Timer />} label="Days seen" value={`${detail.daysSeen || 0}/${detail.days}`} />
             </div>
 
@@ -865,9 +953,9 @@ function IpDetailModal({ ip, days, onClose }) {
             <InvestigationBlock ip={ip} days={days} />
 
             <div className="recentEvents">
-              <h4>Recent history events</h4>
+              <h4>Recent alerts</h4>
               {detail.recentEvents.length === 0 ? (
-                <p>No events in the selected history window.</p>
+                <p>No alerts in the selected history window.</p>
               ) : (
                 <div className="eventList">
                   {detail.recentEvents.slice(0, 10).map((event) => (
@@ -1635,6 +1723,9 @@ function compactMapAttacks(attacks) {
   const groups = new Map();
 
   for (const attack of attacks) {
+    if (attack.latitude === null || attack.latitude === undefined || attack.longitude === null || attack.longitude === undefined) {
+      continue;
+    }
     const latitude = Number(attack.latitude);
     const longitude = Number(attack.longitude);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {

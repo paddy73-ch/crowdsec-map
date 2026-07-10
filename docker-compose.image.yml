@@ -10,7 +10,7 @@ services:
       DATA_SOURCE: "auto"
       REFRESH_SECONDS: "30"
       CROWDSEC_CONTAINER: "crowdsec"
-      CSCLI_COMMAND: "cscli alerts list -o json --limit 250"
+      CSCLI_COMMAND: "cscli alerts list -o json --limit 0"
       LAPI_URL: "${LAPI_URL:-http://crowdsec:8080}"
       LAPI_LOGIN: "${LAPI_LOGIN:-}"
       LAPI_PASSWORD: "${LAPI_PASSWORD:-}"

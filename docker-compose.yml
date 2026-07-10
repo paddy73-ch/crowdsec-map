@@ -13,7 +13,7 @@ services:
       # Variante A: cscli im bestehenden CrowdSec-Container ausfuehren.
       # Dafuer Docker-Socket mounten und den Container-Namen setzen.
       CROWDSEC_CONTAINER: "crowdsec"
-      CSCLI_COMMAND: "cscli alerts list -o json --limit 250"
+      CSCLI_COMMAND: "cscli alerts list -o json --limit 0"
 
       # Variante B: LAPI Alerts mit Watcher-Credentials.
       LAPI_URL: "${LAPI_URL:-http://crowdsec:8080}"

@@ -435,6 +435,23 @@ p {
   white-space: nowrap;
 }
 
+.metricButton {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.metricButton:hover,
+.metricButton:focus-visible {
+  border-color: rgba(104, 221, 198, 0.48);
+  background: rgba(104, 221, 198, 0.09);
+  transform: translateY(-1px);
+  outline: none;
+}
+
 .panel {
   position: relative;
   display: flex;
@@ -1240,6 +1257,132 @@ p {
   border-radius: 8px;
   background: rgba(9, 18, 21, 0.96);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+.metricModal {
+  width: min(1080px, 100%);
+  overflow: hidden;
+}
+
+.metricModalToolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+}
+
+.metricSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 260px;
+  min-height: 38px;
+  border: 1px solid rgba(151, 181, 176, 0.18);
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #8da39f;
+  background: rgba(14, 28, 32, 0.72);
+}
+
+.metricSearch input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  margin: 0 18px;
+  border: 1px solid rgba(104, 221, 198, 0.3);
+  border-radius: 99px;
+  padding: 6px 10px;
+  color: #68ddc6;
+  background: rgba(104, 221, 198, 0.08);
+}
+
+.metricResultList {
+  display: grid;
+  gap: 6px;
+  min-height: 260px;
+  max-height: 520px;
+  overflow: auto;
+  padding: 0 18px;
+}
+
+.metricResultRow {
+  display: grid;
+  grid-template-columns: 92px minmax(130px, 1fr) 54px minmax(190px, 1.5fr) 90px;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #d9e8e5;
+  background: rgba(14, 28, 32, 0.72);
+  text-align: left;
+  cursor: pointer;
+}
+
+.metricResultRow:hover:not(:disabled) {
+  border-color: rgba(104, 221, 198, 0.34);
+  background: rgba(104, 221, 198, 0.07);
+}
+
+.metricResultRow span,
+.metricResultRow strong,
+.metricResultRow em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricResultRow time,
+.metricResultRow span,
+.metricResultRow em {
+  color: #8da39f;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.metricResultRow.groupResult {
+  grid-template-columns: 1fr auto;
+}
+
+.metricEmpty {
+  color: #8da39f;
+  text-align: center;
+}
+
+.metricPager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 18px 18px;
+  color: #8da39f;
+  font-size: 12px;
+}
+
+.metricPager button {
+  min-height: 34px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #e8f3f1;
+  background: #102025;
+}
+
+@media (max-width: 760px) {
+  .metricModalToolbar { align-items: stretch; flex-direction: column; }
+  .metricSearch { min-width: 0; }
+  .metricResultRow { grid-template-columns: 1fr 1fr; }
+  .metricResultRow time { display: none; }
 }
 
 .modalHeader {

@@ -43,7 +43,7 @@ This is the simplest option if your CrowdSec container can already run `cscli al
 environment:
   DATA_SOURCE: "cscli"
   CROWDSEC_CONTAINER: "crowdsec"
-  CSCLI_COMMAND: "cscli alerts list -o json --limit 250"
+  CSCLI_COMMAND: "cscli alerts list -o json --limit 0"
 volumes:
   - /var/run/docker.sock:/var/run/docker.sock:ro
 ```
@@ -92,6 +92,7 @@ environment:
 | `REFRESH_SECONDS` | Default auto-refresh interval |
 | `CROWDSEC_CONTAINER` | Docker container name for `docker exec ... cscli` |
 | `CSCLI_COMMAND` | Command executed inside the CrowdSec container |
+| `LAPI_LIMIT` | Maximum number of LAPI records; default `0` loads all records |
 | `LAPI_URL` | CrowdSec LAPI URL |
 | `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/machine credentials for alerts |
 | `LAPI_API_KEY` | Bouncer key for decisions |

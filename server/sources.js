@@ -7,7 +7,7 @@ import { sampleAlerts } from "./sampleData.js";
 const execFileAsync = promisify(execFile);
 let tokenCache = null;
 const lapiHeaders = {
-  "User-Agent": "crowdsec-map/v0.1.1"
+  "User-Agent": "crowdsec-map/v0.1.4"
 };
 
 export async function readCrowdSecData(requestedSource = config.dataSource) {
@@ -74,7 +74,7 @@ async function readCscliAlerts() {
     ? ["docker", ["exec", config.crowdsecContainer, "sh", "-lc", config.cscliCommand]]
     : ["sh", ["-lc", config.cscliCommand]];
 
-  const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
+  const { stdout } = await execFileAsync(command[0], command[1], { timeout: 60000, maxBuffer: 1024 * 1024 * 64 });
   const payload = JSON.parse(stdout);
   return normalizeCrowdSecPayload(payload, "cscli");
 }
@@ -121,6 +121,10 @@ async function readLapiDecisions() {
 }
 
 function limitPayload(payload, limit) {
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return payload;
+  }
+
   if (Array.isArray(payload)) {
     return payload.slice(0, limit);
   }
