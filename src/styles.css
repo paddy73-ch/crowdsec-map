@@ -192,6 +192,7 @@ select {
 
 .themeLight .modalHeader p,
 .themeLight .rawHeader p,
+.themeLight .rawCommand code,
 .themeLight .recentEvents p,
 .themeLight .ipMetaGrid span,
 .themeLight .ctiHeader p,
@@ -212,6 +213,7 @@ select {
 
 .themeLight .modalHeader button,
 .themeLight .rawActions button,
+.themeLight .rawCommand button,
 .themeLight .lookupActions button,
 .themeLight .lookupActions a,
 .themeLight .investigationRunControls input,
@@ -2010,6 +2012,45 @@ p {
   opacity: 0.5;
 }
 
+.rawCommand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(151, 181, 176, 0.1);
+}
+
+.rawCommand code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+  color: #8da39f;
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  white-space: nowrap;
+}
+
+.rawCommand button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 30px;
+  border: 1px solid rgba(151, 181, 176, 0.2);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #e8f3f1;
+  background: #102025;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.rawCommand button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .rawBlock pre {
   min-height: 0;
   margin: 0;
@@ -2381,6 +2422,11 @@ p {
   }
 
   .rawHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rawCommand {
     align-items: stretch;
     flex-direction: column;
   }

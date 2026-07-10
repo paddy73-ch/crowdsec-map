@@ -83,10 +83,13 @@ app.get("/api/history/ip/:ip", async (request, response) => {
 
   const history = await readIpHistory(request.params.ip, { days: request.query.days });
   let cscli = "";
+  let cscliCommand = "";
   let cscliWarning = "";
 
   try {
-    cscli = await readCscliIpDetails(request.params.ip);
+    const cscliDetails = await readCscliIpDetails(request.params.ip);
+    cscli = cscliDetails.output;
+    cscliCommand = cscliDetails.command;
   } catch (error) {
     cscliWarning = error.message;
   }
@@ -94,8 +97,9 @@ app.get("/api/history/ip/:ip", async (request, response) => {
   response.json({
     ...history,
     cscli,
+    cscliCommand,
     cscliWarning,
-    note: "History is filtered by the selected window. CrowdSec raw details depend on CrowdSec alert retention."
+    note: "CrowdSec alert records, not active bans. History is filtered by the selected window; raw details depend on CrowdSec alert retention."
   });
 });
 

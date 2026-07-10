@@ -744,6 +744,7 @@ function IpDetailModal({ ip, days, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [commandCopied, setCommandCopied] = useState(false);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -783,6 +784,16 @@ function IpDetailModal({ ip, days, onClose }) {
       window.setTimeout(() => setCopied(false), 1400);
     } catch {
       setCopied(false);
+    }
+  };
+
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(detail?.cscliCommand || "");
+      setCommandCopied(true);
+      window.setTimeout(() => setCommandCopied(false), 1400);
+    } catch {
+      setCommandCopied(false);
     }
   };
 
@@ -866,6 +877,12 @@ function IpDetailModal({ ip, days, onClose }) {
                 </div>
               </div>
               {detail.cscliWarning && <div className="warning">cscli: {detail.cscliWarning}</div>}
+              <div className="rawCommand">
+                <code>{detail.cscliCommand || "cscli command unavailable"}</code>
+                <button type="button" onClick={copyCommand} disabled={!detail.cscliCommand} title="Copy cscli command">
+                  <Copy size={14} /> {commandCopied ? "Copied" : "Copy command"}
+                </button>
+              </div>
               <pre>{detail.cscli || "No cscli output for this IP."}</pre>
             </div>
           </>

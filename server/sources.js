@@ -63,7 +63,10 @@ export async function readCscliIpDetails(ip) {
     : ["cscli", ["alerts", "list", "-o", "human", "--ip", ip, "--limit", "0"]];
 
   const { stdout } = await execFileAsync(command[0], command[1], { timeout: 15000, maxBuffer: 1024 * 1024 * 8 });
-  return stdout.trim();
+  return {
+    command: formatCommand(command[0], command[1]),
+    output: stdout.trim()
+  };
 }
 
 async function readCscliAlerts() {
@@ -262,6 +265,18 @@ function parseCsvLine(line) {
   }
   fields.push(field);
   return fields;
+}
+
+function formatCommand(binary, args) {
+  return [binary, ...args].map(shellQuote).join(" ");
+}
+
+function shellQuote(value) {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:=@+-]+$/.test(text)) {
+    return text;
+  }
+  return `'${text.replaceAll("'", "'\\''")}'`;
 }
 
 async function getWatcherToken() {
