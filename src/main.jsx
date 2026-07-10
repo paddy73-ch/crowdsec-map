@@ -277,6 +277,7 @@ function Panel({ rankings, initialMode, storageKey, wide = false }) {
 function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSeconds, setRefreshSeconds, data, loading, onRefresh, onOpenHiddenMenu }) {
   const [sourceOpen, setSourceOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
+  const hiddenMenuPressTimer = useRef(null);
   const displayedSource = data?.source || source || "...";
   const openHiddenMenu = (event) => {
     if (!event.shiftKey || !event.ctrlKey) {
@@ -286,6 +287,22 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
     event.stopPropagation();
     onOpenHiddenMenu();
   };
+  const startHiddenMenuLongPress = (event) => {
+    if (event.pointerType !== "touch") {
+      return;
+    }
+    event.preventDefault();
+    window.clearTimeout(hiddenMenuPressTimer.current);
+    hiddenMenuPressTimer.current = window.setTimeout(() => {
+      onOpenHiddenMenu();
+    }, 3000);
+  };
+  const cancelHiddenMenuLongPress = () => {
+    window.clearTimeout(hiddenMenuPressTimer.current);
+    hiddenMenuPressTimer.current = null;
+  };
+
+  useEffect(() => cancelHiddenMenuLongPress, []);
 
   return (
     <header className={`toolbar ${view === "live" ? "toolbarLive" : "toolbarHistory"}`}>
@@ -403,8 +420,12 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
           type="button"
           className="hiddenMenuTrigger"
           onMouseDown={openHiddenMenu}
+          onPointerDown={startHiddenMenuLongPress}
+          onPointerUp={cancelHiddenMenuLongPress}
+          onPointerCancel={cancelHiddenMenuLongPress}
+          onPointerLeave={cancelHiddenMenuLongPress}
           onContextMenu={openHiddenMenu}
-          title="π"
+          title="π - Ctrl+Shift click or touch and hold for 3 seconds"
           aria-label="Hidden menu"
         >
           π

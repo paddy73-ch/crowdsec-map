@@ -179,6 +179,16 @@ select {
   color: #58706c;
 }
 
+.themeLight .hiddenMenuList h4,
+.themeLight .hiddenRecent h4,
+.themeLight .hiddenMenuListRow,
+.themeLight .hiddenMenuListRow span,
+.themeLight .hiddenMenuListRow strong,
+.themeLight .hiddenRecentRow,
+.themeLight .hiddenRecentRow strong {
+  color: #122321;
+}
+
 .themeLight .ipMetaGrid div,
 .themeLight .lookupBlock,
 .themeLight .investigationBlock,
