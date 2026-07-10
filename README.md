@@ -83,6 +83,16 @@ environment:
   LAPI_API_KEY: "your-bouncer-key"
 ```
 
+## Guided Setup
+
+For an existing Docker-based CrowdSec installation, the helper can create the Alerts machine login, create the Decisions bouncer key, and detect file-based Investigation logs from `acquis.yaml`/`acquis.d`:
+
+```bash
+sudo scripts/autosetup-crowdsec-map.sh
+```
+
+It automatically detects the CrowdSec container, internal LAPI URL, and file-based Acquisition logs. Ambiguous values are requested interactively and can also be overridden with command-line options. It keeps secrets in a mode-`600` `.env` and does not rotate existing credentials unless explicitly requested. See the [Setup assistant and CTI key guide](docs/setup-assistant.md).
+
 ## Environment Variables
 
 | Variable | Purpose |

@@ -5,3 +5,5 @@ data/
 *.log
 *.local
 qa-*.png
+.env
+docker-compose.autosetup.yml
