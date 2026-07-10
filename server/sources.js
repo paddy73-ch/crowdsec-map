@@ -8,7 +8,17 @@ const execFileAsync = promisify(execFile);
 let tokenCache = null;
 let decisionCache = null;
 const lapiHeaders = {
-  "User-Agent": "crowdsec-map/v0.2.1"
+  "User-Agent": "crowdsec-map/v0.2.4"
+};
+const DECISION_FIELDS = {
+  value: (item) => item.ip || item.value,
+  ip: (item) => item.ip || item.value,
+  scope: (item) => item.scope,
+  country: (item) => item.country,
+  scenario: (item) => item.scenario,
+  origin: (item) => item.origin,
+  duration: (item) => item.duration || item.until,
+  until: (item) => item.until || item.duration
 };
 
 export async function readCrowdSecData(requestedSource = config.dataSource) {
@@ -107,13 +117,17 @@ export async function readLapiDecisionOverview(options = {}) {
     };
   }
 
-  const query = String(options.search || "").trim().toLowerCase();
+  const query = String(options.search || "").trim();
   const limit = clampNumber(options.limit, 50, 1, 200);
   const offset = clampNumber(options.offset, 0, 0, Number.MAX_SAFE_INTEGER);
-  const filtered = query
-    ? decisionCache.items.filter((item) => [item.ip, item.country, item.scenario, item.origin, item.scope].some((value) => String(value || "").toLowerCase().includes(query)))
+  const predicates = buildDecisionPredicates(query);
+  const filtered = predicates.length
+    ? decisionCache.items.filter((item) => predicates.every((predicate) => predicate(item)))
     : decisionCache.items;
-  const items = filtered.slice(offset, offset + limit);
+  const sort = Object.hasOwn(DECISION_FIELDS, options.sort) ? options.sort : "";
+  const direction = options.direction === "desc" ? "desc" : "asc";
+  const sorted = sort ? sortDecisions(filtered, sort, direction) : filtered;
+  const items = sorted.slice(offset, offset + limit);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -126,11 +140,94 @@ export async function readLapiDecisionOverview(options = {}) {
     topCountries: countDecisionFields(filtered, "country"),
     topScenarios: countDecisionFields(filtered, "scenario"),
     topOrigins: countDecisionFields(filtered, "origin"),
+    sort,
+    direction,
     offset,
     limit,
     nextOffset: offset + limit < filtered.length ? offset + limit : null,
     items
   };
+}
+
+export function buildDecisionPredicates(query) {
+  if (!query) return [];
+  if (query.length > 256) throw decisionQueryError("Search query is limited to 256 characters");
+
+  return query.split(/\s+/).filter(Boolean).map((token) => {
+    const fieldMatch = token.match(/^([a-z]+)=(.+)$/i);
+    if (fieldMatch) {
+      const field = fieldMatch[1].toLowerCase();
+      const readField = DECISION_FIELDS[field];
+      if (!readField) throw decisionQueryError(`Unknown field '${field}'. Use value, scope, country, scenario, origin, duration or until.`);
+      const matcher = buildDecisionMatcher(fieldMatch[2], true);
+      return (item) => matcher(readField(item));
+    }
+
+    const matcher = buildDecisionMatcher(token);
+    return (item) => Object.values(DECISION_FIELDS).some((readField) => matcher(readField(item)));
+  });
+}
+
+function buildDecisionMatcher(expression, exact = false) {
+  if (expression.startsWith("/")) {
+    const closingSlash = expression.lastIndexOf("/");
+    if (closingSlash <= 0) throw decisionQueryError(`Invalid regex '${expression}': missing closing slash`);
+    const pattern = expression.slice(1, closingSlash);
+    const flags = expression.slice(closingSlash + 1);
+    if (!/^[imu]*$/.test(flags)) throw decisionQueryError(`Invalid regex flags '${flags}'. Supported flags: i, m, u.`);
+    try {
+      const regex = new RegExp(pattern, flags);
+      return (value) => regex.test(String(value || ""));
+    } catch (error) {
+      throw decisionQueryError(`Invalid regex '${expression}': ${error.message}`);
+    }
+  }
+
+  const expected = expression.toLowerCase();
+  return (value) => exact
+    ? String(value || "").toLowerCase() === expected
+    : String(value || "").toLowerCase().includes(expected);
+}
+
+export function sortDecisions(items, field, direction) {
+  const readField = DECISION_FIELDS[field];
+  const factor = direction === "desc" ? -1 : 1;
+  return items.map((item, index) => ({ item, index })).sort((left, right) => {
+    const leftValue = readField(left.item);
+    const rightValue = readField(right.item);
+    const compared = field === "duration"
+      ? compareDecisionDurations(leftValue, rightValue)
+      : String(leftValue || "").localeCompare(String(rightValue || ""), undefined, { numeric: true, sensitivity: "base" });
+    return compared ? compared * factor : left.index - right.index;
+  }).map(({ item }) => item);
+}
+
+function compareDecisionDurations(left, right) {
+  const leftSeconds = durationToSeconds(left);
+  const rightSeconds = durationToSeconds(right);
+  if (leftSeconds !== null && rightSeconds !== null) return leftSeconds - rightSeconds;
+  if (leftSeconds !== null) return -1;
+  if (rightSeconds !== null) return 1;
+  return String(left || "").localeCompare(String(right || ""), undefined, { numeric: true, sensitivity: "base" });
+}
+
+function durationToSeconds(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return null;
+  let seconds = 0;
+  let matchedLength = 0;
+  for (const match of text.matchAll(/(\d+(?:\.\d+)?)([wdhms])/g)) {
+    const multiplier = { w: 604800, d: 86400, h: 3600, m: 60, s: 1 }[match[2]];
+    seconds += Number(match[1]) * multiplier;
+    matchedLength += match[0].length;
+  }
+  return matchedLength === text.length ? seconds : null;
+}
+
+function decisionQueryError(message) {
+  const error = new Error(message);
+  error.name = "DecisionQueryError";
+  return error;
 }
 
 async function fetchLapiDecisions(limit) {

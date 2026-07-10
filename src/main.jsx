@@ -122,7 +122,7 @@ function App() {
         />
         {view === "live" ? (
           <>
-            <WorldMap attacks={attacks} />
+            <WorldMap attacks={attacks} initialLoading={loading && !data} />
             <AgeLegend />
             <Timeline attacks={attacks} error={error || data?.warning} />
           </>
@@ -631,6 +631,8 @@ function DecisionsView({ onSelectIp }) {
   const [query, setQuery] = useState("");
   const [appliedQuery, setAppliedQuery] = useState("");
   const [offset, setOffset] = useState(0);
+  const [sort, setSort] = useState("");
+  const [direction, setDirection] = useState("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -640,6 +642,10 @@ function DecisionsView({ onSelectIp }) {
     try {
       const params = new URLSearchParams({ limit: "50", offset: String(offset) });
       if (appliedQuery) params.set("search", appliedQuery);
+      if (sort) {
+        params.set("sort", sort);
+        params.set("direction", direction);
+      }
       if (refresh) params.set("refresh", "1");
       const response = await fetch(`/api/decisions?${params}`);
       const payload = await response.json();
@@ -650,7 +656,7 @@ function DecisionsView({ onSelectIp }) {
     } finally {
       setLoading(false);
     }
-  }, [appliedQuery, offset]);
+  }, [appliedQuery, direction, offset, sort]);
 
   useEffect(() => {
     loadDecisions();
@@ -662,12 +668,29 @@ function DecisionsView({ onSelectIp }) {
     setAppliedQuery(query.trim());
   };
 
+  const changeSort = (field) => {
+    setOffset(0);
+    if (sort === field) {
+      setDirection((value) => value === "asc" ? "desc" : "asc");
+    } else {
+      setSort(field);
+      setDirection("asc");
+    }
+  };
+
+  const sortHeader = (field, label) => (
+    <button type="button" className={sort === field ? "active" : ""} onClick={() => changeSort(field)} aria-label={`Sort by ${label}`}>
+      <span>{label}</span>
+      {sort === field && (direction === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
+    </button>
+  );
+
   return (
     <section className="decisionsView">
       <div className="decisionsControls">
         <form onSubmit={applySearch}>
           <Search size={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search IP, country, scenario, origin or scope" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search, e.g. origin=capi or scenario=/http-.*/i" title="Field filters: value, scope, country, scenario, origin, duration, until. Regex: /pattern/i" />
           <button type="submit">Search</button>
         </form>
         <button type="button" onClick={() => loadDecisions(true)} disabled={loading} title="Refresh decision cache">
@@ -693,7 +716,7 @@ function DecisionsView({ onSelectIp }) {
         {!error && loading && !decisions && <div className="modalLoading">Loading CrowdSec enforcement decisions...</div>}
         {!error && decisions && (
           <table className="decisionsTable">
-            <thead><tr><th>Value</th><th>Scope</th><th>Country</th><th>Scenario / blocklist</th><th>Origin</th><th>Duration / until</th></tr></thead>
+            <thead><tr><th>{sortHeader("value", "Value")}</th><th>{sortHeader("scope", "Scope")}</th><th>{sortHeader("country", "Country")}</th><th>{sortHeader("scenario", "Scenario / blocklist")}</th><th>{sortHeader("origin", "Origin")}</th><th>{sortHeader("duration", "Duration / until")}</th></tr></thead>
             <tbody>
               {decisions.items.map((item) => (
                 <tr className={isIpv4(item.ip) ? "clickableRow" : ""} key={item.id} onClick={() => isIpv4(item.ip) && onSelectIp(item.ip)}>
@@ -1763,7 +1786,7 @@ function CtiReputationBlock({ reputation, warning, onRefresh, loading }) {
   );
 }
 
-function WorldMap({ attacks, showPaths = true }) {
+function WorldMap({ attacks, showPaths = true, initialLoading = false }) {
   const projection = useMemo(() => geoEqualEarth().fitSize([1120, 590], { type: "Sphere" }), []);
   const path = useMemo(() => geoPath(projection), [projection]);
   const homePoint = projection([HOME.longitude, HOME.latitude]);
@@ -1781,6 +1804,14 @@ function WorldMap({ attacks, showPaths = true }) {
 
   return (
     <div className="mapWrap">
+      {initialLoading && (
+        <div className="mapLoadingStatus" role="status" aria-live="polite">
+          <span className="mapLoadingSpinner" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, index) => <i key={index} style={{ "--dot": index }} />)}
+          </span>
+          <span>Loading live data…</span>
+        </div>
+      )}
       <svg viewBox="0 0 1120 590" role="img" aria-label="World map of CrowdSec alerts">
         <defs>
           <radialGradient id="pulse" cx="50%" cy="50%" r="50%">

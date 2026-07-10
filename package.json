@@ -1,6 +1,6 @@
 {
   "name": "crowdsec-map",
-  "version": "0.2.2",
+  "version": "0.2.4",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",

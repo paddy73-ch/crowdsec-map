@@ -937,9 +937,66 @@ p {
 }
 
 .mapWrap {
+  position: relative;
   min-height: 0;
   padding: 0 28px;
   overflow: hidden;
+}
+
+.mapLoadingStatus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 40px;
+  padding: 0 14px 0 12px;
+  border: 1px solid rgba(104, 221, 198, 0.22);
+  border-radius: 999px;
+  color: #c9e5df;
+  background: rgba(8, 22, 27, 0.76);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mapLoadingSpinner {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  animation: mapLoaderSpin 1s steps(8) infinite;
+}
+
+.mapLoadingSpinner i {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #68ddc6;
+  opacity: calc(1 - var(--dot) * 0.1);
+  transform: rotate(calc(var(--dot) * 45deg)) translateY(-8px);
+}
+
+@keyframes mapLoaderSpin {
+  to { transform: rotate(360deg); }
+}
+
+.themeLight .mapLoadingStatus {
+  color: #12312d;
+  border-color: rgba(21, 155, 140, 0.24);
+  background: rgba(247, 252, 251, 0.9);
+  box-shadow: 0 12px 28px rgba(24, 76, 74, 0.16);
+}
+
+.themeLight .mapLoadingSpinner i {
+  background: #159b8c;
 }
 
 .mapWrap svg {
@@ -1223,6 +1280,36 @@ p {
   background: #0c191d;
 }
 
+.decisionsTable th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+}
+
+.decisionsTable th button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.decisionsTable th button:hover,
+.decisionsTable th button.active {
+  color: #68ddc6;
+}
+
+.decisionsTable th button svg {
+  flex: 0 0 auto;
+}
+
 .decisionsTable tr.clickableRow:hover td {
   background: rgba(104, 221, 198, 0.08);
 }
@@ -1248,6 +1335,11 @@ p {
 .themeLight .decisionsTable th {
   color: #58706c;
   background: rgba(238, 247, 245, 0.98);
+}
+
+.themeLight .decisionsTable th button:hover,
+.themeLight .decisionsTable th button.active {
+  color: #087f75;
 }
 
 .themeLight .decisionsTable td {
@@ -2084,6 +2176,7 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 7px;
   min-height: 34px;
   border: 1px solid rgba(104, 221, 198, 0.48);
   border-radius: 8px;

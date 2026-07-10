@@ -69,12 +69,14 @@ app.get("/api/decisions", async (request, response) => {
   try {
     response.json(await readLapiDecisionOverview({
       search: request.query.search,
+      sort: request.query.sort,
+      direction: request.query.direction,
       offset: request.query.offset,
       limit: request.query.limit,
       refresh: request.query.refresh === "1"
     }));
   } catch (error) {
-    response.status(500).json({ error: error.message });
+    response.status(error.name === "DecisionQueryError" ? 400 : 500).json({ error: error.message });
   }
 });
 
