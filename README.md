@@ -99,7 +99,8 @@ environment:
 | `PUBLIC_TARGET_IP` | Optional manual public target IP shown in the dashboard header |
 | `PUBLIC_TARGET_IP_AUTO` | Auto-detect public target IP when `PUBLIC_TARGET_IP` is empty, default `true` |
 | `PUBLIC_TARGET_IP_REFRESH_MINUTES` | Public IP auto-detect refresh interval, default `60` |
-| `HISTORY_FILE` | Persistent JSONL history file, default `data/history.jsonl` |
+| `HISTORY_FILE` | Legacy JSONL history source used once during automatic SQLite migration |
+| `HISTORY_DATABASE_FILE` | Persistent SQLite history database, default `data/history.sqlite`; existing JSONL data is migrated automatically |
 | `HISTORY_RETENTION_DAYS` | History retention window, default `90` |
 | `CTI_API_KEY` | Optional CrowdSec CTI API key for on-demand IP reputation checks |
 | `CTI_CACHE_FILE` | Persistent CTI cache file, default `data/cti-cache.json` |
@@ -111,6 +112,10 @@ environment:
 | `INVESTIGATION_LOG_PATHS` | Comma, semicolon, or newline separated log paths/globs for IP investigation |
 | `INVESTIGATION_MAX_LINES` | Default sample lines kept per investigation log source, default `50`, UI limit `1-200` |
 | `INVESTIGATION_TIMEOUT_MS` | Maximum server-side investigation scan time, default `8000` |
+
+## History storage
+
+CrowdSec Map stores its recorded alert history in SQLite. On the first v0.2.0 start, an existing `history.jsonl` is imported transactionally and deduplicated by alert ID. The original JSONL file is renamed with a `.migrated-<timestamp>` suffix and retained as a backup. New installations write directly to `history.sqlite`.
 
 ## IP Investigation
 

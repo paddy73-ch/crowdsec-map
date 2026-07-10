@@ -110,13 +110,14 @@ select {
 }
 
 .themeLight .sphere {
-  fill: #e4f0ee;
-  stroke: rgba(16, 124, 113, 0.22);
+  fill: #d8f0f6;
+  stroke: rgba(89, 157, 179, 0.42);
 }
 
 .themeLight .country {
   fill: #cfe0dd;
-  stroke: rgba(39, 87, 82, 0.22);
+  stroke: rgba(248, 252, 251, 0.88);
+  stroke-width: 0.65;
 }
 
 .themeLight .ageLegend {
@@ -347,6 +348,69 @@ select {
 .themeLight .groupIpRow:hover {
   border-color: rgba(16, 124, 113, 0.24);
   background: rgba(104, 221, 198, 0.13);
+}
+
+.themeLight .metricSearch,
+.themeLight .metricResultRow {
+  color: #122321;
+  border-color: rgba(39, 87, 82, 0.14);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.themeLight .metricSearch {
+  color: #40645f;
+}
+
+.themeLight .metricResultRow time,
+.themeLight .metricResultRow span,
+.themeLight .metricResultRow em,
+.themeLight .metricEmpty,
+.themeLight .metricPager {
+  color: #58706c;
+}
+
+.themeLight .metricResultRow:hover:not(:disabled) {
+  border-color: rgba(16, 124, 113, 0.24);
+  background: rgba(104, 221, 198, 0.13);
+}
+
+.themeLight .filterChip {
+  color: #107c71;
+  border-color: rgba(16, 124, 113, 0.22);
+  background: rgba(104, 221, 198, 0.13);
+}
+
+.themeLight .metricPager button {
+  color: #122321;
+  border-color: rgba(39, 87, 82, 0.16);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.themeLight .metricPager button:disabled {
+  color: #90a29f;
+  background: rgba(226, 237, 234, 0.7);
+}
+
+.themeLight .investigationSources summary button {
+  color: #07302c;
+  border-color: rgba(21, 155, 140, 0.38);
+  background: linear-gradient(135deg, #8cebd9, #55d4c8);
+  box-shadow: 0 4px 13px rgba(8, 127, 134, 0.18);
+}
+
+.themeLight .lookupActions button,
+.themeLight .lookupActions a {
+  color: #07302c;
+  border-color: rgba(21, 155, 140, 0.3);
+  background: linear-gradient(135deg, #8cebd9, #55d4c8);
+  box-shadow: 0 4px 13px rgba(8, 127, 134, 0.18);
+}
+
+.themeLight .investigationHeader button {
+  color: #07302c;
+  border-color: rgba(21, 155, 140, 0.3);
+  background: linear-gradient(135deg, #8cebd9, #55d4c8);
+  box-shadow: 0 4px 13px rgba(8, 127, 134, 0.18);
 }
 
 .sidebar {
@@ -885,28 +949,28 @@ p {
 }
 
 .sphere {
-  fill: #0b171b;
-  stroke: rgba(104, 221, 198, 0.22);
+  fill: #0b3442;
+  stroke: rgba(76, 143, 145, 0.72);
 }
 
 .country {
-  fill: #15252a;
-  stroke: rgba(151, 181, 176, 0.22);
-  stroke-width: 0.55;
+  fill: #24443f;
+  stroke: rgba(91, 123, 121, 0.42);
+  stroke-width: 0.62;
 }
 
 .arc {
   fill: none;
-  stroke: rgba(255, 207, 110, 0.2);
+  stroke: rgba(245, 158, 66, 0.42);
   stroke-width: 1.1;
 }
 
 .arc.ageHot {
-  stroke: rgba(255, 87, 94, 0.3);
+  stroke: rgba(255, 107, 74, 0.62);
 }
 
 .arc.ageWarm {
-  stroke: rgba(255, 152, 79, 0.25);
+  stroke: rgba(245, 158, 66, 0.52);
 }
 
 .arc.ageOld {
@@ -936,12 +1000,15 @@ p {
 }
 
 .homeRing {
-  fill: rgba(104, 221, 198, 0.12);
-  stroke: #68ddc6;
+  fill: rgba(104, 221, 198, 0.2);
+  stroke: #8cf3df;
   stroke-width: 2;
 }
 
-.homeDot,
+.homeDot {
+  fill: #ffffff;
+}
+
 .attackPoint circle:last-child {
   fill: #ffcf6e;
 }
@@ -1234,6 +1301,12 @@ p {
 .historyEmpty strong {
   color: #e8f3f1;
   font-size: 18px;
+}
+
+.historySourceNote {
+  margin: -4px 0 0;
+  color: #8da39f;
+  font-size: 12px;
 }
 
 .modalBackdrop {
@@ -1643,14 +1716,26 @@ p {
   justify-content: center;
   gap: 7px;
   min-height: 34px;
-  border: 1px solid rgba(151, 181, 176, 0.2);
+  border: 1px solid rgba(104, 221, 198, 0.42);
   border-radius: 8px;
   padding: 0 11px;
-  color: #e8f3f1;
-  background: #102025;
+  color: #05211e;
+  background: linear-gradient(135deg, #86ead7, #45cfc2);
+  box-shadow: 0 0 0 1px rgba(104, 221, 198, 0.12), 0 0 14px rgba(34, 211, 182, 0.2);
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.lookupActions button:hover:not(:disabled),
+.lookupActions button:focus-visible,
+.lookupActions a:hover,
+.lookupActions a:focus-visible {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(104, 221, 198, 0.42), 0 0 20px rgba(34, 211, 182, 0.32);
+  outline: none;
 }
 
 .lookupActions button {
@@ -1707,14 +1792,24 @@ p {
   justify-content: center;
   gap: 7px;
   min-height: 34px;
-  border: 1px solid rgba(151, 181, 176, 0.2);
+  border: 1px solid rgba(104, 221, 198, 0.42);
   border-radius: 8px;
   padding: 0 11px;
-  color: #e8f3f1;
-  background: #102025;
+  color: #05211e;
+  background: linear-gradient(135deg, #86ead7, #45cfc2);
+  box-shadow: 0 0 0 1px rgba(104, 221, 198, 0.12), 0 0 14px rgba(34, 211, 182, 0.2);
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.investigationHeader button:hover:not(:disabled),
+.investigationHeader button:focus-visible {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(104, 221, 198, 0.42), 0 0 20px rgba(34, 211, 182, 0.32);
+  outline: none;
 }
 
 .investigationHeader button:disabled {
@@ -1795,15 +1890,25 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 26px;
-  border: 1px solid rgba(104, 221, 198, 0.22);
+  min-height: 34px;
+  border: 1px solid rgba(104, 221, 198, 0.48);
   border-radius: 8px;
-  padding: 0 8px;
-  color: #68ddc6;
-  background: rgba(104, 221, 198, 0.09);
-  font-size: 11px;
+  padding: 0 11px;
+  color: #041715;
+  background: linear-gradient(135deg, #68ddc6, #21bcb1);
+  box-shadow: 0 0 0 1px rgba(104, 221, 198, 0.12), 0 0 14px rgba(34, 211, 182, 0.2);
+  font-size: 12px;
   font-weight: 900;
   cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.investigationSources summary button:hover,
+.investigationSources summary button:focus-visible {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 1px rgba(104, 221, 198, 0.42), 0 0 20px rgba(34, 211, 182, 0.32);
+  outline: none;
 }
 
 .investigationSources pre {

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { config } from "./config.js";
 
-const USER_AGENT = "crowdsec-map/v0.1.4";
+const USER_AGENT = "crowdsec-map/v0.2.0";
 
 export async function readIpReputation(ip, options = {}) {
   const cache = await readCache();

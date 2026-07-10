@@ -1,38 +1,39 @@
 import { createReadStream, existsSync } from "node:fs";
-import { appendFile, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
+import { DatabaseSync } from "node:sqlite";
 import { config } from "./config.js";
 
 const MAX_HISTORY_DAYS = 180;
-const historyIds = new Set();
-let idsLoaded = false;
-let compacting = false;
+let databasePromise = null;
+let lastPrunedAt = 0;
 
 export async function recordHistory(alerts) {
-  await ensureHistoryIds();
-
+  const database = await getHistoryDatabase();
   const now = new Date();
-  const lines = [];
-
-  for (const alert of alerts || []) {
-    const entry = normalizeHistoryEntry(alert, now);
-    if (!entry || historyIds.has(entry.id)) {
-      continue;
+  const insert = database.prepare(`
+    INSERT OR IGNORE INTO alerts
+      (id, seen_at, seen_at_ms, ip, cidr24, as_name, country, scenario, event_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  database.exec("BEGIN");
+  try {
+    for (const alert of alerts || []) {
+      const entry = normalizeHistoryEntry(alert, now);
+      if (entry) insert.run(...entryValues(entry));
     }
-
-    historyIds.add(entry.id);
-    lines.push(`${JSON.stringify(entry)}\n`);
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
   }
 
-  if (lines.length > 0) {
-    await ensureHistoryDir();
-    await appendFile(config.historyFile, lines.join(""), "utf8");
+  if (Date.now() - lastPrunedAt > 24 * 60 * 60 * 1000) {
+    const cutoff = Date.now() - config.historyRetentionDays * 24 * 60 * 60 * 1000;
+    database.prepare("DELETE FROM alerts WHERE seen_at_ms < ?").run(cutoff);
+    lastPrunedAt = Date.now();
   }
-
-  void compactHistory().catch((error) => {
-    console.warn(`History compaction failed: ${error.message}`);
-  });
 }
 
 export async function readHistorySummary(options = {}) {
@@ -40,13 +41,13 @@ export async function readHistorySummary(options = {}) {
   const groupBy = normalizeGroupBy(options.groupBy);
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
   const groups = new Map();
-  let totalEvents = 0;
+  const database = await getHistoryDatabase();
+  const totalEvents = Number(database.prepare("SELECT COUNT(*) AS count FROM alerts").get().count);
   let matchedEvents = 0;
 
   await forEachHistoryEntry((entry) => {
-    totalEvents += 1;
     const seenAt = new Date(entry.seenAt).getTime();
-    if (!Number.isFinite(seenAt) || seenAt < since) {
+    if (!Number.isFinite(seenAt)) {
       return;
     }
 
@@ -71,7 +72,7 @@ export async function readHistorySummary(options = {}) {
     }
 
     groups.set(key, group);
-  });
+  }, { since });
 
   const items = [...groups.values()]
     .map((group) => ({
@@ -123,12 +124,8 @@ export async function readIpHistory(ip, options = {}) {
   let lastSeen = "";
 
   await forEachHistoryEntry((entry) => {
-    if (entry.ip !== ip) {
-      return;
-    }
-
     const seenAt = new Date(entry.seenAt).getTime();
-    if (!Number.isFinite(seenAt) || seenAt < since) {
+    if (!Number.isFinite(seenAt)) {
       return;
     }
 
@@ -153,7 +150,7 @@ export async function readIpHistory(ip, options = {}) {
       asName: entry.asName || "unknown",
       count
     });
-  });
+  }, { since, ip });
 
   events.sort((a, b) => new Date(b.seenAt) - new Date(a.seenAt));
 
@@ -191,7 +188,7 @@ export async function readGroupIps(options = {}) {
 
   await forEachHistoryEntry((entry) => {
     const seenAt = new Date(entry.seenAt).getTime();
-    if (!Number.isFinite(seenAt) || seenAt < since || getHistoryKey(entry, groupBy) !== label) {
+    if (!Number.isFinite(seenAt)) {
       return;
     }
 
@@ -212,7 +209,7 @@ export async function readGroupIps(options = {}) {
     }
 
     ips.set(ip, item);
-  });
+  }, { since, groupBy, label });
 
   const items = [...ips.values()]
     .map((item) => ({
@@ -264,74 +261,130 @@ function normalizeHistoryEntry(alert, now) {
   };
 }
 
-async function ensureHistoryIds() {
-  if (idsLoaded) {
-    return;
-  }
-
-  await forEachHistoryEntry((entry) => {
-    if (entry.id) {
-      historyIds.add(entry.id);
-    }
-  });
-  idsLoaded = true;
+async function getHistoryDatabase() {
+  if (!databasePromise) databasePromise = initializeHistoryDatabase();
+  return databasePromise;
 }
 
-async function compactHistory() {
-  if (compacting || !idsLoaded || !existsSync(config.historyFile)) {
-    return;
-  }
+async function initializeHistoryDatabase() {
+  await mkdir(path.dirname(config.historyDatabaseFile), { recursive: true });
+  const database = new DatabaseSync(config.historyDatabaseFile);
+  database.exec(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    CREATE TABLE IF NOT EXISTS alerts (
+      id TEXT PRIMARY KEY,
+      seen_at TEXT NOT NULL,
+      seen_at_ms INTEGER NOT NULL,
+      ip TEXT NOT NULL,
+      cidr24 TEXT NOT NULL,
+      as_name TEXT NOT NULL DEFAULT '',
+      country TEXT NOT NULL DEFAULT '??',
+      scenario TEXT NOT NULL DEFAULT 'unknown',
+      event_count INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS alerts_seen_at_idx ON alerts(seen_at_ms DESC);
+    CREATE INDEX IF NOT EXISTS alerts_ip_seen_at_idx ON alerts(ip, seen_at_ms DESC);
+    CREATE INDEX IF NOT EXISTS alerts_cidr24_seen_at_idx ON alerts(cidr24, seen_at_ms DESC);
+    CREATE INDEX IF NOT EXISTS alerts_country_seen_at_idx ON alerts(country, seen_at_ms DESC);
+    CREATE INDEX IF NOT EXISTS alerts_scenario_seen_at_idx ON alerts(scenario, seen_at_ms DESC);
+    CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+  `);
+  await migrateJsonlHistory(database);
+  const cutoff = Date.now() - config.historyRetentionDays * 24 * 60 * 60 * 1000;
+  database.prepare("DELETE FROM alerts WHERE seen_at_ms < ?").run(cutoff);
+  lastPrunedAt = Date.now();
+  return database;
+}
 
-  compacting = true;
+async function migrateJsonlHistory(database) {
+  const migration = database.prepare("SELECT value FROM metadata WHERE key = 'jsonl_migrated'").get();
+  if (migration) return;
+
+  let imported = 0;
+  let damaged = 0;
+  const insert = database.prepare(`
+    INSERT OR IGNORE INTO alerts
+      (id, seen_at, seen_at_ms, ip, cidr24, as_name, country, scenario, event_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  database.exec("BEGIN");
   try {
-    const cutoff = Date.now() - config.historyRetentionDays * 24 * 60 * 60 * 1000;
-    const tempFile = `${config.historyFile}.tmp`;
-    const keptIds = new Set();
-    const lines = [];
-
-    await forEachHistoryEntry((entry) => {
-      const seenAt = new Date(entry.seenAt).getTime();
-      if (Number.isFinite(seenAt) && seenAt >= cutoff) {
-        keptIds.add(entry.id);
-        lines.push(`${JSON.stringify(entry)}\n`);
+    if (existsSync(config.historyFile)) {
+      const stream = createReadStream(config.historyFile, { encoding: "utf8" });
+      const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
+      for await (const line of reader) {
+        if (!line.trim()) continue;
+        try {
+          const entry = JSON.parse(line);
+          const result = insert.run(...entryValues(entry));
+          imported += Number(result.changes || 0);
+        } catch {
+          damaged += 1;
+        }
       }
-    });
-
-    await ensureHistoryDir();
-    await writeFile(tempFile, lines.join(""), "utf8");
-    await rename(tempFile, config.historyFile);
-    historyIds.clear();
-    keptIds.forEach((id) => historyIds.add(id));
+    }
+    database.prepare("INSERT INTO metadata (key, value) VALUES ('jsonl_migrated', ?)").run(new Date().toISOString());
+    database.exec("COMMIT");
   } catch (error) {
-    await rm(`${config.historyFile}.tmp`, { force: true }).catch(() => {});
+    database.exec("ROLLBACK");
     throw error;
-  } finally {
-    compacting = false;
+  }
+
+  if (existsSync(config.historyFile)) {
+    const backup = `${config.historyFile}.migrated-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    await rename(config.historyFile, backup);
+    console.log(`History migration completed: ${imported} alerts imported, ${damaged} damaged lines skipped, backup: ${backup}`);
   }
 }
 
-async function forEachHistoryEntry(callback) {
-  if (!existsSync(config.historyFile)) {
-    return;
+async function forEachHistoryEntry(callback, options = {}) {
+  const database = await getHistoryDatabase();
+  const clauses = [];
+  const values = [];
+  if (Number.isFinite(options.since)) {
+    clauses.push("seen_at_ms >= ?");
+    values.push(options.since);
   }
-
-  const stream = createReadStream(config.historyFile, { encoding: "utf8" });
-  const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-  for await (const line of reader) {
-    if (!line.trim()) {
-      continue;
-    }
-    try {
-      callback(JSON.parse(line));
-    } catch {
-      // Ignore damaged lines and keep the rest of the history usable.
-    }
+  if (options.ip) {
+    clauses.push("ip = ?");
+    values.push(options.ip);
   }
+  if (options.groupBy && options.label) {
+    const column = { ip: "ip", cidr24: "cidr24", asn: "as_name", country: "country", scenario: "scenario" }[options.groupBy];
+    clauses.push(`${column} = ?`);
+    values.push(options.label);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  const rows = database.prepare(`SELECT * FROM alerts ${where} ORDER BY seen_at_ms DESC`).all(...values);
+  rows.forEach((row) => callback({
+    id: row.id,
+    seenAt: row.seen_at,
+    ip: row.ip,
+    cidr24: row.cidr24,
+    asName: row.as_name,
+    country: row.country,
+    scenario: row.scenario,
+    count: Number(row.event_count)
+  }));
 }
 
-async function ensureHistoryDir() {
-  await mkdir(path.dirname(config.historyFile), { recursive: true });
+function entryValues(entry) {
+  if (!entry?.id || !entry?.ip || Number.isNaN(new Date(entry.seenAt).getTime())) {
+    throw new Error("Invalid history entry");
+  }
+  const seenAt = new Date(entry.seenAt).toISOString();
+  return [
+    String(entry.id),
+    seenAt,
+    new Date(seenAt).getTime(),
+    String(entry.ip),
+    entry.cidr24 || toCidr24(String(entry.ip)),
+    entry.asName || "",
+    entry.country || "??",
+    entry.scenario || "unknown",
+    Number(entry.count || 1)
+  ];
 }
 
 function createHistoryGroup(label) {

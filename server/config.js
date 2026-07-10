@@ -13,6 +13,7 @@ export const config = {
   publicTargetIpAuto: parseBoolean(process.env.PUBLIC_TARGET_IP_AUTO, true),
   publicTargetIpRefreshMinutes: Number(process.env.PUBLIC_TARGET_IP_REFRESH_MINUTES || 60),
   historyFile: process.env.HISTORY_FILE || "data/history.jsonl",
+  historyDatabaseFile: process.env.HISTORY_DATABASE_FILE || "data/history.sqlite",
   historyRetentionDays: Number(process.env.HISTORY_RETENTION_DAYS || 90),
   ctiApiKey: process.env.CTI_API_KEY || "",
   ctiApiUrl: trimTrailingSlash(process.env.CTI_API_URL || "https://cti.api.crowdsec.net/v2"),

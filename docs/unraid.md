@@ -19,7 +19,8 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 
 - `WebUI`: `http://[IP]:[PORT:8088]`
 - `Appdata`: `/mnt/user/appdata/crowdsec-map` is mounted to `/app/data` for the History view.
-- `HISTORY_FILE`: `/app/data/history.jsonl`
+- `HISTORY_FILE`: `/app/data/history.jsonl` (one-time migration source)
+- `HISTORY_DATABASE_FILE`: `/app/data/history.sqlite`
 - `HISTORY_RETENTION_DAYS`: `90`
 - `PUBLIC_TARGET_IP`: optional manual public IP shown in the dashboard header.
 - `PUBLIC_TARGET_IP_AUTO`: auto-detect the public IP when `PUBLIC_TARGET_IP` is empty, default `true`.

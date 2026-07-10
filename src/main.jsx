@@ -9,7 +9,7 @@ import "./styles.css";
 
 const countries = feature(world, world.objects.countries).features;
 const APP_VERSION = `v${packageInfo.version}`;
-const HOME = { latitude: 47.3769, longitude: 8.5417 };
+const HOME = { latitude: 47.4426, longitude: 9.5329 };
 const SOURCE_OPTIONS = [
   ["auto", "Auto"],
   ["lapi-alerts", "LAPI alerts"],
@@ -158,7 +158,7 @@ function Sidebar({ data, totals, onOpenMetric }) {
 
       <div className="metricGrid">
         <Metric icon={<ShieldAlert />} label="Active Bans" value={totals.activeBans || 0} onClick={() => onOpenMetric("bans")} />
-        <Metric icon={<Activity />} label="Alerts" value={totals.alerts || 0} onClick={() => onOpenMetric("alerts")} />
+        <Metric icon={<Activity />} label="Current Alerts" value={totals.alerts || 0} onClick={() => onOpenMetric("alerts")} />
         <Metric icon={<Globe2 />} label="Countries" value={totals.countries || 0} onClick={() => onOpenMetric("countries")} />
         <Metric icon={<Crosshair />} label="Scenarios" value={totals.scenarios || 0} onClick={() => onOpenMetric("scenarios")} />
       </div>
@@ -230,7 +230,7 @@ function MetricDrilldownModal({ data, initialMode, onClose, onSelectIp }) {
         </header>
         <div className="metricModalToolbar">
           <div className="segmented wide" role="group" aria-label="Metric detail mode">
-            {[['bans', 'Active Bans'], ['alerts', 'Alerts'], ['countries', 'Countries'], ['scenarios', 'Scenarios']].map(([value, label]) => (
+            {[['bans', 'Active Bans'], ['alerts', 'Current Alerts'], ['countries', 'Countries'], ['scenarios', 'Scenarios']].map(([value, label]) => (
               <button type="button" className={mode === value ? "active" : ""} key={value} onClick={() => { setMode(value); setAlertFilter(null); }}>{label}</button>
             ))}
           </div>
@@ -678,9 +678,11 @@ function HistoryView() {
 
       <div className="historySummary">
         <Metric icon={<BarChart3 />} label="Groups" value={history?.items?.length || 0} />
-        <Metric icon={<Activity />} label="Alerts" value={history?.matchedEvents || 0} />
+        <Metric icon={<Activity />} label="Recorded Alerts" value={history?.matchedEvents || 0} />
         <Metric icon={<Timer />} label="Window" value={`${history?.days || days}d`} />
       </div>
+
+      <p className="historySourceNote">Recorded locally by CrowdSec Map. This archive can include alerts that CrowdSec no longer retains.</p>
 
       <div className="historyTableWrap">
         {error && <div className="warning">{error}</div>}
@@ -819,7 +821,7 @@ function GroupDetailModal({ group, days, onClose, onSelectIp }) {
           <>
             <div className="ipSummaryGrid">
               <Metric icon={<BarChart3 />} label="IPs" value={detail.items.length || 0} />
-              <Metric icon={<Activity />} label="Alerts" value={detail.matchedEvents || 0} />
+              <Metric icon={<Activity />} label="Recorded Alerts" value={detail.matchedEvents || 0} />
               <Metric icon={<Timer />} label="Window" value={`${detail.days}d`} />
             </div>
 
@@ -925,7 +927,7 @@ function IpDetailModal({ ip, days, onClose }) {
           <>
             <div className="ipSummaryGrid">
               <Metric icon={<Activity />} label="Log Events" value={detail.alerts || 0} />
-              <Metric icon={<BarChart3 />} label="Alerts" value={detail.events || 0} />
+              <Metric icon={<BarChart3 />} label="Recorded Alerts" value={detail.events || 0} />
               <Metric icon={<Timer />} label="Days seen" value={`${detail.daysSeen || 0}/${detail.days}`} />
             </div>
 
@@ -1108,7 +1110,7 @@ function InvestigationBlock({ ip, days }) {
                           event.stopPropagation();
                           setSelectedSource(source);
                         }}>
-                          Deep investigation
+                          <Search size={14} /> Deep investigation
                         </button>
                       )}
                       {source.hits} hits · {source.forbidden} '403 (Forbidden)'
@@ -1497,6 +1499,7 @@ function IpLookupBlock({ ip }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const abuseIpDbUrl = `https://www.abuseipdb.com/check/${encodeURIComponent(ip)}`;
   const shodanUrl = `https://www.shodan.io/host/${encodeURIComponent(ip)}`;
 
   const loadStats = useCallback(async () => {
@@ -1552,6 +1555,9 @@ function IpLookupBlock({ ip }) {
         <button type="button" onClick={() => loadReputation()} disabled={loading}>
           <ShieldAlert size={14} className={loading ? "spin" : ""} /> CrowdSec CTI
         </button>
+        <a href={abuseIpDbUrl} target="_blank" rel="noreferrer">
+          <ShieldAlert size={14} /> AbuseIPDB
+        </a>
         <a href={shodanUrl} target="_blank" rel="noreferrer">
           <Crosshair size={14} /> Shodan.io
         </a>
@@ -1689,13 +1695,16 @@ function WorldMap({ attacks }) {
         ))}
         <circle className="homeRing" cx={homePoint[0]} cy={homePoint[1]} r="11" />
         <circle className="homeDot" cx={homePoint[0]} cy={homePoint[1]} r="4" />
-        {plotted.map((attack) => (
+        {plotted.map((attack) => {
+          const radii = getAttackMarkerRadii(attack.count);
+          return (
           <g className={`attackPoint ${getAgeClass(attack.createdAt)}`} key={attack.id}>
-            <circle cx={attack.x} cy={attack.y} r={Math.min(22, 7 + attack.count)} fill="url(#pulse)" />
-            <circle cx={attack.x} cy={attack.y} r={Math.min(9, 3 + attack.count / 2)} />
+            <circle cx={attack.x} cy={attack.y} r={radii.glow} fill="url(#pulse)" />
+            <circle cx={attack.x} cy={attack.y} r={radii.core} />
             <title>{`${attack.country} ${attack.sourceCount} source${attack.sourceCount === 1 ? "" : "s"} ${attack.scenario}`}</title>
           </g>
-        ))}
+          );
+        })}
       </svg>
     </div>
   );
@@ -1717,6 +1726,14 @@ function getSignalDuration(count, index) {
   const weightedCount = Math.max(1, Number(count || 1));
   const baseDuration = 8.2 - Math.min(4.2, Math.log2(weightedCount + 1) * 0.9);
   return Math.max(3.2, baseDuration + (index % 4) * 0.25).toFixed(2);
+}
+
+function getAttackMarkerRadii(count) {
+  const frequency = Math.log2(Math.max(1, Number(count || 1)) + 1);
+  return {
+    glow: Math.min(15, 4.5 + frequency * 1.4),
+    core: Math.min(6, 2 + frequency * 0.55)
+  };
 }
 
 function compactMapAttacks(attacks) {
