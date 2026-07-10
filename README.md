@@ -22,7 +22,7 @@ http://192.168.192.101:8088
 
 ## Data Sources
 
-The app can read multiple CrowdSec sources. In the UI, switch between `Auto`, `LAPI alerts`, `LAPI decisions`, `cscli`, and `Sample`.
+The Live map can read `Auto`, `LAPI alerts`, `cscli`, and `Sample`. Enforcement decisions are intentionally separated into the paginated `Decisions` view because blocklists are not detected attacks.
 
 ## Dashboard Features
 
@@ -33,6 +33,7 @@ The app can read multiple CrowdSec sources. In the UI, switch between `Auto`, `L
 - Ranking panels for `Countries`, `IPs`, `Scenarios`, and `Bans`.
 - Active banned IP list with remaining ban duration.
 - Timeline grouped by source IP and minute, expandable up to three rows.
+- Cached and server-paginated `Decisions` view for CrowdSec enforcement and blocklist data.
 - IP Investigation panel inspired by `csfind`: on-demand log hit counts, 403 counts, sampled log lines, and a paginated `See all` log view with search, filter, and sorting.
 
 ## Source Option A: `cscli` From an Existing CrowdSec Container
@@ -72,13 +73,12 @@ environment:
   LAPI_PASSWORD: "your-password"
 ```
 
-## Source Option C: LAPI Decisions
+## Decisions View
 
-This option uses a bouncer key against `/v1/decisions`. It works well for current bans, but depending on your CrowdSec data it may include less context than alerts.
+The dedicated Decisions view uses a bouncer key against `/v1/decisions`. Decisions can include tens of thousands of Community and third-party blocklist entries, so they are cached for 60 seconds and returned to the browser in pages of 50. They never enter the attack Timeline or Recorded History.
 
 ```yaml
 environment:
-  DATA_SOURCE: "lapi-decisions"
   LAPI_URL: "http://crowdsec:8080"
   LAPI_API_KEY: "your-bouncer-key"
 ```
@@ -88,7 +88,7 @@ environment:
 | Variable | Purpose |
 | --- | --- |
 | `PORT` | Web/API port inside the container, default `8088` |
-| `DATA_SOURCE` | `auto`, `cscli`, `lapi-alerts`, `lapi-decisions`, `sample` |
+| `DATA_SOURCE` | Live detection source: `auto`, `cscli`, `lapi-alerts`, or `sample` |
 | `REFRESH_SECONDS` | Default auto-refresh interval |
 | `CROWDSEC_CONTAINER` | Docker container name for `docker exec ... cscli` |
 | `CSCLI_COMMAND` | Command executed inside the CrowdSec container |

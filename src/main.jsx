@@ -12,9 +12,8 @@ const APP_VERSION = `v${packageInfo.version}`;
 const HOME = { latitude: 47.4426, longitude: 9.5329 };
 const SOURCE_OPTIONS = [
   ["auto", "Auto"],
-  ["lapi-alerts", "LAPI alerts"],
-  ["lapi-decisions", "LAPI decisions"],
-  ["cscli", "cscli"],
+  ["lapi-alerts", "LAPI alerts · detections"],
+  ["cscli", "cscli · fallback"],
   ["sample", "Sample"]
 ];
 const REFRESH_OPTIONS = [
@@ -61,20 +60,25 @@ function App() {
   const [error, setError] = useState("");
   const [metricMode, setMetricMode] = useState("");
   const [selectedIp, setSelectedIp] = useState("");
+  const requestControllerRef = useRef(null);
 
   const loadData = useCallback(async () => {
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/attacks?source=${encodeURIComponent(source)}`);
+      const response = await fetch(`/api/attacks?source=${encodeURIComponent(source)}`, { signal: controller.signal });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       setData(await response.json());
     } catch (loadError) {
+      if (loadError.name === "AbortError") return;
       setError(loadError.message);
     } finally {
-      setLoading(false);
+      if (requestControllerRef.current === controller) setLoading(false);
     }
   }, [source]);
 
@@ -122,8 +126,10 @@ function App() {
             <AgeLegend />
             <Timeline attacks={attacks} error={error || data?.warning} />
           </>
-        ) : (
+        ) : view === "history" ? (
           <HistoryView />
+        ) : (
+          <DecisionsView onSelectIp={setSelectedIp} />
         )}
         {hiddenMenuOpen && <HiddenMenuModal onClose={() => setHiddenMenuOpen(false)} />}
       </section>
@@ -396,10 +402,10 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
     <header className={`toolbar ${view === "live" ? "toolbarLive" : "toolbarHistory"}`}>
       <div>
         <div className="titleLine">
-          <h2>{view === "live" ? "Live attacks" : "History"}</h2>
+          <h2>{view === "live" ? "Live attacks" : view === "history" ? "History" : "Block decisions"}</h2>
           {data?.publicTargetIp && <span title={`Public target IP: ${data.publicTargetIpSource || "unknown"}`}>{data.publicTargetIp}</span>}
         </div>
-        <p>{view === "live" ? "Last update" : "Repeated sources"} {formatTime(data?.generatedAt)}</p>
+        <p>{view === "live" ? `Last update ${formatTime(data?.generatedAt)}` : view === "history" ? `Repeated sources ${formatTime(data?.generatedAt)}` : "Enforcement data · not detected attacks"}</p>
       </div>
       <div className="toolbarControls">
         <div className="viewSwitch" role="group" aria-label="Dashboard view">
@@ -419,8 +425,16 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
           >
             <BarChart3 size={15} /> History
           </button>
+          <button
+            type="button"
+            className={view === "decisions" ? "active" : ""}
+            onClick={() => setView("decisions")}
+            title="Block decisions"
+          >
+            <ShieldAlert size={15} /> Decisions
+          </button>
         </div>
-        <div className="toolbarStatus">
+        {view !== "decisions" && <div className="toolbarStatus">
           <div className="toolbarMenuWrap">
             <span>Source</span>
             <button
@@ -489,10 +503,10 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
               </div>
             )}
           </div>
-        </div>
-        <button type="button" onClick={onRefresh} disabled={loading} title="Refresh" aria-label="Refresh">
+        </div>}
+        {view !== "decisions" && <button type="button" onClick={onRefresh} disabled={loading} title="Refresh" aria-label="Refresh">
           <RefreshCcw size={17} className={loading ? "spin" : ""} />
-        </button>
+        </button>}
         <button
           type="button"
           className="themeToggle"
@@ -609,6 +623,108 @@ function HiddenMenuList({ title, items }) {
       ))}
       {items.length === 0 && <p>No data.</p>}
     </div>
+  );
+}
+
+function DecisionsView({ onSelectIp }) {
+  const [decisions, setDecisions] = useState(null);
+  const [query, setQuery] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [offset, setOffset] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadDecisions = useCallback(async (refresh = false) => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ limit: "50", offset: String(offset) });
+      if (appliedQuery) params.set("search", appliedQuery);
+      if (refresh) params.set("refresh", "1");
+      const response = await fetch(`/api/decisions?${params}`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+      setDecisions(payload);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [appliedQuery, offset]);
+
+  useEffect(() => {
+    loadDecisions();
+  }, [loadDecisions]);
+
+  const applySearch = (event) => {
+    event.preventDefault();
+    setOffset(0);
+    setAppliedQuery(query.trim());
+  };
+
+  return (
+    <section className="decisionsView">
+      <div className="decisionsControls">
+        <form onSubmit={applySearch}>
+          <Search size={16} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search IP, country, scenario, origin or scope" />
+          <button type="submit">Search</button>
+        </form>
+        <button type="button" onClick={() => loadDecisions(true)} disabled={loading} title="Refresh decision cache">
+          <RefreshCcw size={16} className={loading ? "spin" : ""} /> Refresh cache
+        </button>
+      </div>
+
+      <div className="decisionsSummary">
+        <Metric icon={<ShieldAlert />} label="All Decisions" value={decisions?.total || 0} />
+        <Metric icon={<Search />} label="Matching" value={decisions?.matched || 0} />
+        <Metric icon={<Globe2 />} label="Countries" value={decisions?.countries || 0} />
+        <Metric icon={<Crosshair />} label="Scenarios" value={decisions?.scenarios || 0} />
+      </div>
+
+      <div className="decisionRankingStrip">
+        <DecisionRanks title="Top scenarios" items={decisions?.topScenarios || []} />
+        <DecisionRanks title="Top countries" items={decisions?.topCountries || []} />
+        <DecisionRanks title="Top origins" items={decisions?.topOrigins || []} />
+      </div>
+
+      <div className="decisionsTableWrap">
+        {error && <div className="warning">decisions: {error}</div>}
+        {!error && loading && !decisions && <div className="modalLoading">Loading CrowdSec enforcement decisions...</div>}
+        {!error && decisions && (
+          <table className="decisionsTable">
+            <thead><tr><th>Value</th><th>Scope</th><th>Country</th><th>Scenario / blocklist</th><th>Origin</th><th>Duration / until</th></tr></thead>
+            <tbody>
+              {decisions.items.map((item) => (
+                <tr className={isIpv4(item.ip) ? "clickableRow" : ""} key={item.id} onClick={() => isIpv4(item.ip) && onSelectIp(item.ip)}>
+                  <td><strong>{item.ip || item.value || "unknown"}</strong></td>
+                  <td>{item.scope || "Ip"}</td>
+                  <td>{item.country || "??"}</td>
+                  <td title={item.scenario}>{item.scenario || "unknown"}</td>
+                  <td>{item.origin || "unknown"}</td>
+                  <td title={item.until}>{item.duration || item.until || "active"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <footer className="decisionsPager">
+        <span>Cached {formatRelativeTime(decisions?.cachedAt)} · 50 per page</span>
+        <div>
+          <button type="button" disabled={offset === 0 || loading} onClick={() => setOffset((value) => Math.max(0, value - 50))}>Previous</button>
+          <strong>{offset + 1}–{Math.min(offset + 50, decisions?.matched || 0)} of {decisions?.matched || 0}</strong>
+          <button type="button" disabled={decisions?.nextOffset == null || loading} onClick={() => setOffset(decisions.nextOffset)}>Next</button>
+        </div>
+      </footer>
+    </section>
+  );
+}
+
+function DecisionRanks({ title, items }) {
+  return (
+    <div><strong>{title}</strong><span>{items.slice(0, 5).map((item) => `${item.label} ${item.count}`).join(" · ") || "No data"}</span></div>
   );
 }
 
@@ -1647,7 +1763,7 @@ function CtiReputationBlock({ reputation, warning, onRefresh, loading }) {
   );
 }
 
-function WorldMap({ attacks }) {
+function WorldMap({ attacks, showPaths = true }) {
   const projection = useMemo(() => geoEqualEarth().fitSize([1120, 590], { type: "Sphere" }), []);
   const path = useMemo(() => geoPath(projection), [projection]);
   const homePoint = projection([HOME.longitude, HOME.latitude]);
@@ -1658,7 +1774,7 @@ function WorldMap({ attacks }) {
       return point && homePoint ? { ...attack, x: point[0], y: point[1], hx: homePoint[0], hy: homePoint[1] } : null;
     })
     .filter(Boolean);
-  const activePaths = plotted.slice(0, MAX_SIGNAL_PATHS).map((attack) => ({
+  const activePaths = (showPaths ? plotted.slice(0, MAX_SIGNAL_PATHS) : []).map((attack) => ({
     ...attack,
     arcPath: createArcPath(attack)
   }));
@@ -1713,7 +1829,10 @@ function WorldMap({ attacks }) {
 function getAgeClass(createdAt) {
   const ageMinutes = (Date.now() - new Date(createdAt).getTime()) / 60000;
 
-  if (!Number.isFinite(ageMinutes) || ageMinutes <= 15) {
+  if (!Number.isFinite(ageMinutes)) {
+    return "ageOld";
+  }
+  if (ageMinutes <= 15) {
     return "ageHot";
   }
   if (ageMinutes <= 60) {

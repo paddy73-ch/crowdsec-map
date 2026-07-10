@@ -3,7 +3,7 @@ import geoip from "geoip-lite";
 export function normalizeCrowdSecPayload(payload, sourceLabel) {
   const rawItems = Array.isArray(payload) ? payload : payload?.items || payload?.alerts || payload?.decisions || [];
   const alerts = rawItems
-    .map((item, index) => normalizeItem(item, index))
+    .map((item, index) => normalizeItem(item, index, sourceLabel))
     .filter((item) => item && !isFeedUpdate(item.scenario));
 
   return {
@@ -14,14 +14,14 @@ export function normalizeCrowdSecPayload(payload, sourceLabel) {
   };
 }
 
-function normalizeItem(item, index) {
+function normalizeItem(item, index, sourceLabel) {
   const source = item.source || item;
   const decisions = Array.isArray(item.decisions) ? item.decisions : [];
   const firstDecision = decisions[0] || {};
   const scenario = formatScenarioName(item.scenario || item.scenario_hash || item.scenario_version || item.reason || item.type || "unknown");
   const ip = source.ip || item.ip || item.value || firstDecision.value || item.scope_value || "";
   const geo = resolveGeo(source, ip);
-  const createdAt = item.created_at || item.start_at || item.until || item.createdAt || item.created || new Date().toISOString();
+  const createdAt = item.created_at || item.start_at || item.createdAt || item.created || (sourceLabel === "lapi-decisions" ? "" : new Date().toISOString());
 
   return {
     id: String(item.id || item.alert_id || firstDecision.id || `${ip}-${createdAt}-${index}`),
@@ -35,7 +35,11 @@ function normalizeItem(item, index) {
     value: firstDecision.value || item.value || ip,
     createdAt,
     count: Number(item.events_count || item.events?.length || item.count || 1),
-    asName: source.as_name || source.asName || ""
+    asName: source.as_name || source.asName || "",
+    origin: item.origin || firstDecision.origin || "",
+    scope: item.scope || firstDecision.scope || source.scope || "Ip",
+    duration: item.duration || firstDecision.duration || "",
+    until: item.until || item.expires_at || firstDecision.until || firstDecision.expires_at || ""
   };
 }
 

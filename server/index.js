@@ -8,7 +8,7 @@ import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHis
 import { readInvestigationLogLines, readIpInvestigation } from "./investigation.js";
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
-import { readActiveBans, readCrowdSecData, readCscliIpDetails } from "./sources.js";
+import { readActiveBans, readCrowdSecData, readCscliIpDetails, readLapiDecisionOverview } from "./sources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -38,7 +38,9 @@ app.get("/api/attacks", async (request, response) => {
     activeBansWarning = `active-bans: ${error.message}`;
   }
 
-  await recordHistory(data.alerts);
+  if (data.source !== "lapi-decisions") {
+    await recordHistory(data.alerts);
+  }
 
   response.json({
     ...data,
@@ -61,6 +63,19 @@ app.get("/api/history", async (request, response) => {
     days: request.query.days,
     groupBy: request.query.groupBy
   }));
+});
+
+app.get("/api/decisions", async (request, response) => {
+  try {
+    response.json(await readLapiDecisionOverview({
+      search: request.query.search,
+      offset: request.query.offset,
+      limit: request.query.limit,
+      refresh: request.query.refresh === "1"
+    }));
+  } catch (error) {
+    response.status(500).json({ error: error.message });
+  }
 });
 
 app.get("/api/history/group", async (request, response) => {

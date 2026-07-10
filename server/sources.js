@@ -6,22 +6,20 @@ import { sampleAlerts } from "./sampleData.js";
 
 const execFileAsync = promisify(execFile);
 let tokenCache = null;
+let decisionCache = null;
 const lapiHeaders = {
-  "User-Agent": "crowdsec-map/v0.2.0"
+  "User-Agent": "crowdsec-map/v0.2.1"
 };
 
 export async function readCrowdSecData(requestedSource = config.dataSource) {
   const source = requestedSource === "auto" ? config.dataSource : requestedSource;
-  const candidates = source === "auto" ? ["lapi-alerts", "lapi-decisions", "cscli", "sample"] : [source];
+  const candidates = source === "auto" ? ["lapi-alerts", "cscli", "sample"] : [source];
   const errors = [];
 
   for (const candidate of candidates) {
     try {
       if (candidate === "lapi-alerts") {
         return await readLapiAlerts();
-      }
-      if (candidate === "lapi-decisions") {
-        return await readLapiDecisions();
       }
       if (candidate === "cscli") {
         return await readCscliAlerts();
@@ -98,13 +96,53 @@ async function readLapiAlerts() {
   return normalizeCrowdSecPayload(await response.json(), "lapi-alerts");
 }
 
-async function readLapiDecisions() {
+export async function readLapiDecisionOverview(options = {}) {
+  const now = Date.now();
+  if (!decisionCache || options.refresh || decisionCache.expiresAt <= now) {
+    const data = normalizeCrowdSecPayload(await fetchLapiDecisions(0), "lapi-decisions");
+    decisionCache = {
+      items: data.alerts,
+      cachedAt: new Date().toISOString(),
+      expiresAt: now + 60_000
+    };
+  }
+
+  const query = String(options.search || "").trim().toLowerCase();
+  const limit = clampNumber(options.limit, 50, 1, 200);
+  const offset = clampNumber(options.offset, 0, 0, Number.MAX_SAFE_INTEGER);
+  const filtered = query
+    ? decisionCache.items.filter((item) => [item.ip, item.country, item.scenario, item.origin, item.scope].some((value) => String(value || "").toLowerCase().includes(query)))
+    : decisionCache.items;
+  const items = filtered.slice(offset, offset + limit);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    cachedAt: decisionCache.cachedAt,
+    cacheSeconds: 60,
+    total: decisionCache.items.length,
+    matched: filtered.length,
+    countries: new Set(filtered.map((item) => item.country).filter(Boolean)).size,
+    scenarios: new Set(filtered.map((item) => item.scenario).filter(Boolean)).size,
+    topCountries: countDecisionFields(filtered, "country"),
+    topScenarios: countDecisionFields(filtered, "scenario"),
+    topOrigins: countDecisionFields(filtered, "origin"),
+    offset,
+    limit,
+    nextOffset: offset + limit < filtered.length ? offset + limit : null,
+    items
+  };
+}
+
+async function fetchLapiDecisions(limit) {
   if (!config.lapiApiKey) {
     throw new Error("LAPI_API_KEY is missing");
   }
 
   const url = new URL(`${config.lapiUrl}/v1/decisions`);
   url.searchParams.set("type", "ban");
+  if (limit > 0) {
+    url.searchParams.set("limit", String(limit));
+  }
 
   const response = await fetch(url, {
     headers: {
@@ -117,33 +155,24 @@ async function readLapiDecisions() {
     throw new Error(`LAPI decisions failed with HTTP ${response.status}`);
   }
 
-  return normalizeCrowdSecPayload(limitPayload(await response.json(), config.lapiLimit), "lapi-decisions");
+  return response.json();
 }
 
-function limitPayload(payload, limit) {
-  if (!Number.isFinite(limit) || limit <= 0) {
-    return payload;
+function countDecisionFields(items, field, limit = 10) {
+  const counts = new Map();
+  for (const item of items) {
+    const key = item[field] || "unknown";
+    counts.set(key, (counts.get(key) || 0) + 1);
   }
+  return [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, limit);
+}
 
-  if (Array.isArray(payload)) {
-    return payload.slice(0, limit);
-  }
-
-  if (Array.isArray(payload?.items)) {
-    return {
-      ...payload,
-      items: payload.items.slice(0, limit)
-    };
-  }
-
-  if (Array.isArray(payload?.decisions)) {
-    return {
-      ...payload,
-      decisions: payload.decisions.slice(0, limit)
-    };
-  }
-
-  return payload;
+function clampNumber(value, fallback, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(min, Math.min(max, Math.round(number))) : fallback;
 }
 
 function normalizeActiveBans(payload) {
