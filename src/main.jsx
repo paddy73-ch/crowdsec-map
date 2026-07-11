@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, ArrowUpRight, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Filter, Globe2, Map as MapIcon, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, UserRoundSearch, X } from "lucide-react";
+import { Activity, AlertTriangle, ArrowUpRight, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Filter, Globe2, Map as MapIcon, Maximize2, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, UserRoundSearch, X } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -61,6 +61,9 @@ function App() {
   const [metricMode, setMetricMode] = useState("");
   const [selectedIp, setSelectedIp] = useState("");
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventDrilldown, setEventDrilldown] = useState(null);
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [selectedMapGroup, setSelectedMapGroup] = useState(null);
   const [filters, setFilters] = useState({ query: "", country: "all", scenario: "all", age: "all" });
   const requestControllerRef = useRef(null);
 
@@ -131,12 +134,15 @@ function App() {
         {view === "live" ? (
           <>
             <LiveFilterBar filters={filters} setFilters={setFilters} options={filterOptions} resultCount={filteredAttacks.length} totalCount={attacks.length} />
-            <WorldMap attacks={filteredAttacks} initialLoading={loading && !data} />
+            <div className="liveMapStack">
+              <WorldMap attacks={filteredAttacks} initialLoading={loading && !data} onExpand={() => { setSelectedMapGroup(null); setMapExpanded(true); }} />
+              <ActivityTrend attacks={filteredAttacks} onSelectBucket={(bucket) => setEventDrilldown({ title: `Attack activity · ${bucket.label}`, subtitle: `${bucket.count} attempts in this time segment`, attacks: bucket.attacks })} />
+            </div>
             <AgeLegend />
-            <ActivityTrend attacks={filteredAttacks} />
-            <Timeline attacks={filteredAttacks} error={error || data?.warning} />
             <EventTable attacks={filteredAttacks} activeBans={data?.activeBans || []} selectedEvent={selectedEvent} onSelectEvent={setSelectedEvent} />
             {selectedEvent && <EventDetailDrawer event={selectedEvent} activeBans={data?.activeBans || []} onClose={() => setSelectedEvent(null)} onInvestigate={(ip) => { setSelectedEvent(null); setSelectedIp(ip); }} />}
+            {eventDrilldown && <EventCollectionDrawer detail={eventDrilldown} activeBans={data?.activeBans || []} onClose={() => setEventDrilldown(null)} onInvestigate={(ip) => { setEventDrilldown(null); setSelectedIp(ip); }} />}
+            {mapExpanded && <ExpandedMapModal attacks={filteredAttacks} error={error || data?.warning} selectedGroup={selectedMapGroup} onSelectGroup={setSelectedMapGroup} onClose={() => { setMapExpanded(false); setSelectedMapGroup(null); }} onInspect={(detail) => { setMapExpanded(false); setSelectedMapGroup(null); setEventDrilldown(detail); }} onInvestigate={(ip) => { setMapExpanded(false); setSelectedMapGroup(null); setSelectedIp(ip); }} />}
           </>
         ) : view === "history" ? (
           <HistoryView />
@@ -210,13 +216,13 @@ function LiveFilterBar({ filters, setFilters, options, resultCount, totalCount }
   );
 }
 
-function ActivityTrend({ attacks }) {
+function ActivityTrend({ attacks, onSelectBucket }) {
   const buckets = useMemo(() => buildTrendBuckets(attacks, 24), [attacks]);
   const max = Math.max(1, ...buckets.map((item) => item.count));
   return (
     <section className="activityTrend" aria-label="Attack activity over time">
       <header><div><h3>Attack activity</h3><p>Filtered event volume over the current alert window</p></div><strong>{attacks.reduce((sum, item) => sum + (Number(item.count) || 1), 0)} attempts</strong></header>
-      <div className="trendBars">{buckets.map((item) => <div className="trendBucket" key={item.key} title={`${item.label}: ${item.count} attempts`}><i style={{ height: `${Math.max(5, (item.count / max) * 100)}%` }} /><span>{item.label}</span></div>)}</div>
+      <div className="trendBars">{buckets.map((item) => { const tooltip = `${item.dateLabel ? `${item.dateLabel} · ` : ""}${item.label} · ${item.count} attempts`; return <button type="button" className="trendBucket" key={item.key} data-tooltip={tooltip} aria-label={`${tooltip} · open details`} disabled={!item.attacks.length} onClick={() => onSelectBucket(item)}><i style={{ height: `${Math.max(5, (item.count / max) * 100)}%` }} /></button>; })}</div>
     </section>
   );
 }
@@ -253,8 +259,39 @@ function EventDetailDrawer({ event, activeBans, onClose, onInvestigate }) {
   );
 }
 
+function EventCollectionDrawer({ detail, activeBans, onClose, onInvestigate }) {
+  const banned = useMemo(() => new Set(activeBans.map((item) => item.ip || item.value).filter(Boolean)), [activeBans]);
+  const sources = useMemo(() => groupEventSources(detail.attacks), [detail.attacks]);
+  useEffect(() => {
+    const closeOnEscape = (event) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  return (
+    <aside className="eventDrawer collectionDrawer" aria-label={detail.title}>
+      <header><div><span>Event drill-down</span><h3>{detail.title}</h3><p>{detail.subtitle}</p></div><button type="button" onClick={onClose} aria-label="Close event details"><X size={18} /></button></header>
+      <div className="collectionSummary"><span><strong>{sources.length}</strong> source IPs</span><span><strong>{new Set(detail.attacks.map((item) => item.asn || item.asName).filter(Boolean)).size}</strong> ASNs</span><span><strong>{new Set(detail.attacks.map((item) => item.scenario).filter(Boolean)).size}</strong> scenarios</span></div>
+      <div className="collectionSources">
+        {sources.map((source) => <article key={source.ip}><div><strong>{source.ip}</strong><span>{source.country || "Unknown"} · {source.asn || "ASN unavailable"}</span><small>{source.scenarios.join(" · ")}</small></div><div><span className={`eventStatus ${banned.has(source.ip) ? "blocked" : "observed"}`}>{banned.has(source.ip) ? "Blocked" : `${source.attempts} attempts`}</span><button type="button" onClick={() => onInvestigate(source.ip)}>Investigate IP <ArrowUpRight size={14} /></button></div></article>)}
+      </div>
+    </aside>
+  );
+}
+
+function groupEventSources(attacks) {
+  const sources = new Map();
+  for (const attack of attacks) {
+    const ip = attack.ip || "unknown";
+    const current = sources.get(ip) || { ip, country: attack.country, asn: attack.asn || attack.asName, attempts: 0, scenarios: new Set() };
+    current.attempts += Number(attack.count) || 1;
+    if (attack.scenario) current.scenarios.add(readableScenario(attack.scenario));
+    sources.set(ip, current);
+  }
+  return [...sources.values()].map((source) => ({ ...source, scenarios: [...source.scenarios].slice(0, 3) })).sort((a, b) => b.attempts - a.attempts);
+}
+
 function buildTrendBuckets(attacks, bucketCount) {
-  if (!attacks.length) return Array.from({ length: bucketCount }, (_, index) => ({ key: index, label: "—", count: 0 }));
+  if (!attacks.length) return Array.from({ length: bucketCount }, (_, index) => ({ key: index, label: "—", count: 0, attacks: [] }));
   let newest = 0;
   let oldest = Number.POSITIVE_INFINITY;
   for (const item of attacks) {
@@ -264,18 +301,31 @@ function buildTrendBuckets(attacks, bucketCount) {
     oldest = Math.min(oldest, timestamp);
   }
   if (!Number.isFinite(oldest) || newest <= oldest) oldest = newest - 3600000;
-  const step = Math.max(60000, (newest - oldest) / bucketCount);
+  const rawStep = Math.max(60000, (newest - oldest) / bucketCount);
+  const steps = [60000, 300000, 900000, 1800000, 3600000, 7200000, 10800000, 21600000, 43200000, 86400000];
+  const step = steps.find((value) => value >= rawStep) || Math.ceil(rawStep / 86400000) * 86400000;
+  const rangeEnd = Math.ceil(newest / step) * step;
+  const rangeStart = rangeEnd - bucketCount * step;
+  const spansMultipleDays = new Date(rangeStart).toDateString() !== new Date(rangeEnd - 1).toDateString();
   const buckets = Array.from({ length: bucketCount }, (_, index) => {
-    const timestamp = oldest + index * step;
-    return { key: index, label: new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), count: 0 };
+    const timestamp = rangeStart + index * step;
+    const date = new Date(timestamp);
+    return {
+      key: timestamp,
+      label: date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      dateLabel: spansMultipleDays ? date.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit" }) : "",
+      count: 0,
+      attacks: []
+    };
   });
   for (const item of attacks) {
     const timestamp = new Date(item.createdAt).getTime();
     if (!Number.isFinite(timestamp)) continue;
-    const index = Math.min(bucketCount - 1, Math.max(0, Math.floor((timestamp - oldest) / step)));
+    const index = Math.min(bucketCount - 1, Math.max(0, Math.floor((timestamp - rangeStart) / step)));
     buckets[index].count += Number(item.count) || 1;
+    buckets[index].attacks.push(item);
   }
-  return buckets;
+  return buckets.reverse();
 }
 
 function buildFilterOptions(attacks) {
@@ -1923,7 +1973,7 @@ function CtiReputationBlock({ reputation, warning, onRefresh, loading }) {
   );
 }
 
-function WorldMap({ attacks, showPaths = true, initialLoading = false }) {
+function WorldMap({ attacks, showPaths = true, initialLoading = false, expanded = false, onExpand, onSelectPoint }) {
   const projection = useMemo(() => geoEqualEarth().fitSize([1120, 590], { type: "Sphere" }), []);
   const path = useMemo(() => geoPath(projection), [projection]);
   const homePoint = projection([HOME.longitude, HOME.latitude]);
@@ -1940,7 +1990,8 @@ function WorldMap({ attacks, showPaths = true, initialLoading = false }) {
   }));
 
   return (
-    <div className="mapWrap">
+    <div className={`mapWrap ${expanded ? "mapWrapExpanded" : ""}`} onClick={!expanded ? onExpand : undefined} role={!expanded ? "button" : undefined} tabIndex={!expanded ? 0 : undefined} onKeyDown={(event) => !expanded && (event.key === "Enter" || event.key === " ") && onExpand?.()}>
+      {!expanded && <button type="button" className="mapExpandButton" title="Expand live map" aria-label="Expand live map" onClick={(event) => { event.stopPropagation(); onExpand?.(); }}><Maximize2 size={16} /></button>}
       {initialLoading && (
         <div className="mapLoadingStatus" role="status" aria-live="polite">
           <span className="mapLoadingSpinner" aria-hidden="true">
@@ -1982,7 +2033,7 @@ function WorldMap({ attacks, showPaths = true, initialLoading = false }) {
         {plotted.map((attack) => {
           const radii = getAttackMarkerRadii(attack.count);
           return (
-          <g className={`attackPoint ${getAgeClass(attack.createdAt)}`} key={attack.id}>
+          <g className={`attackPoint ${getAgeClass(attack.createdAt)} ${expanded ? "interactive" : ""}`} key={attack.id} role={expanded ? "button" : undefined} tabIndex={expanded ? 0 : undefined} onClick={expanded ? (event) => { event.stopPropagation(); onSelectPoint?.(attack); } : undefined} onKeyDown={expanded ? (event) => (event.key === "Enter" || event.key === " ") && onSelectPoint?.(attack) : undefined}>
             <circle cx={attack.x} cy={attack.y} r={radii.glow} fill="url(#pulse)" />
             <circle cx={attack.x} cy={attack.y} r={radii.core} />
             <title>{`${attack.country} ${attack.sourceCount} source${attack.sourceCount === 1 ? "" : "s"} ${attack.scenario}`}</title>
@@ -1990,6 +2041,30 @@ function WorldMap({ attacks, showPaths = true, initialLoading = false }) {
           );
         })}
       </svg>
+    </div>
+  );
+}
+
+function ExpandedMapModal({ attacks, error, selectedGroup, onSelectGroup, onClose, onInspect, onInvestigate }) {
+  useEffect(() => {
+    const closeOnEscape = (event) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  const sources = selectedGroup ? groupEventSources(selectedGroup.attacks || []) : [];
+  return (
+    <div className="expandedMapBackdrop" role="presentation">
+      <section className="expandedMapModal" role="dialog" aria-modal="true" aria-label="Expanded live attack map">
+        <header><div><span>Live map investigation</span><h2>Attack sources</h2><p>Click a source point to inspect its IPs, ASNs and scenarios.</p></div><button type="button" onClick={onClose} aria-label="Close expanded map"><X size={20} /></button></header>
+        <div className="expandedMapBody">
+          <div className="expandedMapCanvas"><WorldMap attacks={attacks} expanded showPaths onSelectPoint={onSelectGroup} /></div>
+          <div className="expandedMapInsights">
+            <ActivityTrend attacks={attacks} onSelectBucket={(bucket) => onInspect({ title: `Attack activity · ${bucket.label}`, subtitle: `${bucket.count} attempts in this time segment`, attacks: bucket.attacks })} />
+            <Timeline attacks={attacks} error={error} onSelectGroup={(group) => onInspect({ title: `Timeline · ${group.ip}`, subtitle: `${group.totalCount} attempts around ${formatTime(group.createdAt)}`, attacks: group.attacks })} />
+          </div>
+          {selectedGroup && <aside className="mapSourcePanel"><header><div><span>{selectedGroup.country || "Unknown"}</span><h3>{selectedGroup.sourceCount} source{selectedGroup.sourceCount === 1 ? "" : "s"}</h3><p>{selectedGroup.count} attempts · {readableScenario(selectedGroup.scenario)}</p></div><button type="button" onClick={() => onSelectGroup(null)} aria-label="Close source details"><X size={16} /></button></header><div className="mapSourceList">{sources.map((source) => <article key={source.ip}><div><strong>{source.ip}</strong><span>{source.asn || "ASN / provider unavailable"}</span><small>{source.scenarios.join(" · ")}</small></div><button type="button" onClick={() => onInvestigate(source.ip)}>Investigate IP <ArrowUpRight size={14} /></button></article>)}</div></aside>}
+        </div>
+      </section>
     </div>
   );
 }
@@ -2046,7 +2121,9 @@ function compactMapAttacks(attacks) {
 
     if (existing) {
       existing.count += Number(attack.count || 1);
-      existing.sourceCount += 1;
+      existing.attacks.push(attack);
+      if (attack.ip) existing.sourceIps.add(attack.ip);
+      existing.sourceCount = existing.sourceIps.size;
       if (new Date(attack.createdAt) > new Date(existing.createdAt)) {
         existing.createdAt = attack.createdAt;
       }
@@ -2059,11 +2136,17 @@ function compactMapAttacks(attacks) {
       latitude,
       longitude,
       count: Number(attack.count || 1),
-      sourceCount: 1
+      sourceCount: attack.ip ? 1 : 0,
+      sourceIps: new Set(attack.ip ? [attack.ip] : []),
+      attacks: [attack]
     });
   }
 
-  return [...groups.values()].sort((a, b) => {
+  return [...groups.values()].map((group) => {
+    const result = { ...group };
+    delete result.sourceIps;
+    return result;
+  }).sort((a, b) => {
     if (b.count !== a.count) {
       return b.count - a.count;
     }
@@ -2086,7 +2169,7 @@ function AgeLegend() {
   );
 }
 
-function Timeline({ attacks, error }) {
+function Timeline({ attacks, error, onSelectGroup }) {
   const recent = useMemo(() => compactTimelineAttacks(attacks), [attacks]);
   const [visibleRows, setVisibleRows] = useState(readStoredTimelineRows);
   const [visibleColumns, setVisibleColumns] = useState(MAX_TIMELINE_COLUMNS);
@@ -2142,7 +2225,7 @@ function Timeline({ attacks, error }) {
       >
         {error && <div className="warning">{error}</div>}
         {visibleItems.map((attack) => (
-          <article className={getAgeClass(attack.createdAt)} key={`${attack.id}-timeline`}>
+          <article className={`${getAgeClass(attack.createdAt)} clickable`} key={`${attack.id}-timeline`} role="button" tabIndex={0} onClick={() => onSelectGroup(attack)} onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && onSelectGroup(attack)}>
             <span>{formatTime(attack.createdAt)}</span>
             <strong title={attack.ip}>{attack.ip || "unknown"}</strong>
             <p title={attack.scenario}>
@@ -2219,6 +2302,7 @@ function compactTimelineAttacks(attacks) {
 
     if (existing) {
       existing.totalCount += count;
+      existing.attacks.push(attack);
       existing.scenarioCounts.set(attack.scenario, (existing.scenarioCounts.get(attack.scenario) || 0) + count);
       if (new Date(attack.createdAt) > new Date(existing.createdAt)) {
         existing.createdAt = attack.createdAt;
@@ -2233,6 +2317,7 @@ function compactTimelineAttacks(attacks) {
       id: `timeline-${key}`,
       ip,
       totalCount: count,
+      attacks: [attack],
       scenarioCounts: new Map([[attack.scenario, count]])
     });
   }
