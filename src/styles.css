@@ -3066,7 +3066,7 @@ p {
 .anomalyCard p { margin-top: 3px; color: #bda98b; font-size: 11px; line-height: 1.4; }
 
 .mapStage {
-  grid-template-rows: auto auto minmax(300px, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(240px, 1fr) auto auto auto;
 }
 
 .toolbar {
@@ -3128,6 +3128,30 @@ p {
   border-bottom: 1px solid rgba(151, 181, 176, 0.08);
 }
 
+.activityTrend {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 14px;
+  min-height: 82px;
+  margin: 8px 20px 0;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(10, 23, 28, 0.82);
+}
+
+.activityTrend header { display: flex; flex-direction: column; justify-content: center; }
+.activityTrend h3 { margin: 0; font-size: 13px; }
+.activityTrend header p { margin-top: 3px; color: #78918d; font-size: 10px; line-height: 1.35; }
+.activityTrend header strong { margin-top: 8px; color: #68ddc6; font-size: 12px; }
+.trendBars { display: grid; grid-template-columns: repeat(24, minmax(3px, 1fr)); align-items: end; gap: 3px; min-width: 0; height: 60px; border-bottom: 1px solid rgba(151, 181, 176, 0.12); }
+.trendBucket { position: relative; display: flex; align-items: end; height: 100%; min-width: 0; }
+.trendBucket i { display: block; width: 100%; min-height: 3px; border-radius: 2px 2px 0 0; background: linear-gradient(180deg, #68ddc6, #188f8c); transition: height 180ms ease, filter 120ms ease; }
+.trendBucket:hover i { filter: brightness(1.25); }
+.trendBucket span { position: absolute; right: 0; bottom: -13px; display: none; color: #78918d; font-size: 8px; white-space: nowrap; }
+.trendBucket:nth-child(6n + 1) span { display: block; }
+
 .timeline { grid-template-columns: repeat(var(--timeline-columns, 9), minmax(118px, 1fr)); }
 .timeline article { min-width: 118px; padding: 7px 9px; }
 .timelineControls { right: 20px; bottom: 8px; }
@@ -3158,11 +3182,43 @@ p {
 .eventTable tbody tr { cursor: pointer; transition: background 120ms ease; }
 .eventTable tbody tr:hover,
 .eventTable tbody tr:focus { outline: 0; background: rgba(104, 221, 198, 0.07); }
+.eventTable tbody tr.selected { background: rgba(104, 221, 198, 0.12); box-shadow: inset 3px 0 #68ddc6; }
 .eventTable td strong { color: #e8f3f1; }
 .eventStatus { display: inline-flex; align-items: center; min-height: 20px; border-radius: 4px; padding: 0 6px; font-size: 10px; font-weight: 800; }
 .eventStatus.blocked { color: #77e19c; background: rgba(36, 142, 76, 0.2); }
 .eventStatus.observed { color: #ffcf6e; background: rgba(171, 111, 22, 0.22); }
 .eventTableEmpty { height: 74px; color: #78918d; text-align: center !important; }
+
+.eventDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(370px, 100vw);
+  height: 100vh;
+  border-left: 1px solid rgba(104, 221, 198, 0.2);
+  padding: 20px;
+  color: #e8f3f1;
+  background: rgba(7, 18, 23, 0.98);
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.38);
+  animation: eventDrawerIn 180ms ease-out;
+}
+
+@keyframes eventDrawerIn { from { opacity: 0; transform: translateX(18px); } }
+.eventDrawer > header { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid rgba(151, 181, 176, 0.13); }
+.eventDrawer header span { color: #68ddc6; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.eventDrawer h3 { margin: 6px 0 3px; font-size: 24px; }
+.eventDrawer header p { color: #8da39f; font-size: 12px; }
+.eventDrawer header button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(151, 181, 176, 0.16); border-radius: 7px; color: #b7c9c5; background: #102025; cursor: pointer; }
+.eventDrawerStatus { display: flex; align-items: center; justify-content: space-between; color: #8da39f; font-size: 11px; }
+.eventDrawer dl { display: grid; gap: 0; margin: 0; }
+.eventDrawer dl div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; border-bottom: 1px solid rgba(151, 181, 176, 0.09); padding: 11px 0; }
+.eventDrawer dt { color: #78918d; font-size: 11px; }
+.eventDrawer dd { overflow: hidden; margin: 0; color: #dceae7; font-size: 12px; font-weight: 700; text-overflow: ellipsis; }
+.investigateEvent { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; margin-top: auto; border: 1px solid rgba(104, 221, 198, 0.35); border-radius: 7px; color: #06211e; background: #68ddc6; cursor: pointer; font-weight: 900; }
 
 .themeLight .liveFilterBar,
 .themeLight .toolbar { background: rgba(242, 250, 248, 0.96); }
@@ -3172,6 +3228,9 @@ p {
 .themeLight .eventTable th { background: #edf7f5; }
 .themeLight .eventTable td strong { color: #122321; }
 .themeLight .anomalyCard { background: rgba(255, 224, 168, .5); }
+.themeLight .activityTrend { border-color: rgba(39, 87, 82, 0.14); background: rgba(255,255,255,.82); }
+.themeLight .eventDrawer { color: #122321; border-left-color: rgba(39, 87, 82, 0.16); background: rgba(244, 251, 249, .99); }
+.themeLight .eventDrawer dd { color: #122321; }
 
 @media (max-width: 1180px) {
   .appShell { grid-template-columns: 250px minmax(0, 1fr); }
@@ -3191,6 +3250,7 @@ p {
   .mapStage { height: auto; min-height: 0; overflow: visible; }
   .mapWrap { height: 420px; }
   .liveFilterBar { grid-template-columns: 1fr 1fr; }
+  .activityTrend { grid-template-columns: 150px minmax(0, 1fr); }
 }
 
 @media (max-width: 620px) {
@@ -3204,6 +3264,10 @@ p {
   .toolbarStatus { min-width: 0; white-space: normal; }
   .liveFilterBar { grid-template-columns: 1fr; padding: 10px 14px; }
   .mapWrap { height: 310px; margin: 10px 14px 0; }
+  .activityTrend { grid-template-columns: 1fr; margin-inline: 14px; }
+  .activityTrend header { display: grid; grid-template-columns: 1fr auto; }
+  .activityTrend header p { grid-column: 1 / -1; }
+  .activityTrend header strong { grid-column: 2; grid-row: 1; margin: 0; }
   .timelineDock { padding-inline: 14px; }
   .eventTablePanel { margin-inline: 14px; }
   .eventTable { min-width: 760px; }

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, AlertTriangle, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Filter, Globe2, Map as MapIcon, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, UserRoundSearch, X } from "lucide-react";
+import { Activity, AlertTriangle, ArrowUpRight, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Filter, Globe2, Map as MapIcon, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, UserRoundSearch, X } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -60,6 +60,7 @@ function App() {
   const [error, setError] = useState("");
   const [metricMode, setMetricMode] = useState("");
   const [selectedIp, setSelectedIp] = useState("");
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [filters, setFilters] = useState({ query: "", country: "all", scenario: "all", age: "all" });
   const requestControllerRef = useRef(null);
 
@@ -105,6 +106,10 @@ function App() {
   const filterOptions = useMemo(() => buildFilterOptions(attacks), [attacks]);
   const filteredAttacks = useMemo(() => filterAttacks(attacks, filters), [attacks, filters]);
 
+  useEffect(() => {
+    if (selectedEvent && !filteredAttacks.includes(selectedEvent)) setSelectedEvent(null);
+  }, [filteredAttacks, selectedEvent]);
+
   return (
     <main className={`appShell theme${theme === "light" ? "Light" : "Dark"}`}>
       <Sidebar data={data} totals={totals} attacks={filteredAttacks} onOpenMetric={setMetricMode} />
@@ -128,8 +133,10 @@ function App() {
             <LiveFilterBar filters={filters} setFilters={setFilters} options={filterOptions} resultCount={filteredAttacks.length} totalCount={attacks.length} />
             <WorldMap attacks={filteredAttacks} initialLoading={loading && !data} />
             <AgeLegend />
+            <ActivityTrend attacks={filteredAttacks} />
             <Timeline attacks={filteredAttacks} error={error || data?.warning} />
-            <EventTable attacks={filteredAttacks} activeBans={data?.activeBans || []} onSelectIp={setSelectedIp} />
+            <EventTable attacks={filteredAttacks} activeBans={data?.activeBans || []} selectedEvent={selectedEvent} onSelectEvent={setSelectedEvent} />
+            {selectedEvent && <EventDetailDrawer event={selectedEvent} activeBans={data?.activeBans || []} onClose={() => setSelectedEvent(null)} onInvestigate={(ip) => { setSelectedEvent(null); setSelectedIp(ip); }} />}
           </>
         ) : view === "history" ? (
           <HistoryView />
@@ -203,18 +210,72 @@ function LiveFilterBar({ filters, setFilters, options, resultCount, totalCount }
   );
 }
 
-function EventTable({ attacks, activeBans, onSelectIp }) {
+function ActivityTrend({ attacks }) {
+  const buckets = useMemo(() => buildTrendBuckets(attacks, 24), [attacks]);
+  const max = Math.max(1, ...buckets.map((item) => item.count));
+  return (
+    <section className="activityTrend" aria-label="Attack activity over time">
+      <header><div><h3>Attack activity</h3><p>Filtered event volume over the current alert window</p></div><strong>{attacks.reduce((sum, item) => sum + (Number(item.count) || 1), 0)} attempts</strong></header>
+      <div className="trendBars">{buckets.map((item) => <div className="trendBucket" key={item.key} title={`${item.label}: ${item.count} attempts`}><i style={{ height: `${Math.max(5, (item.count / max) * 100)}%` }} /><span>{item.label}</span></div>)}</div>
+    </section>
+  );
+}
+
+function EventTable({ attacks, activeBans, selectedEvent, onSelectEvent }) {
   const banned = useMemo(() => new Set(activeBans.map((item) => item.ip || item.value).filter(Boolean)), [activeBans]);
   const rows = attacks.slice(0, 12);
   return (
     <section className="eventTablePanel">
       <header><div><h3>Recent security events</h3><p>Click an event to investigate its source IP.</p></div><span>{attacks.length} matching</span></header>
       <div className="eventTableScroll"><table className="eventTable"><thead><tr><th>Time</th><th>Source IP</th><th>Country</th><th>Scenario</th><th>ASN / provider</th><th>Attempts</th><th>Status</th></tr></thead><tbody>
-        {rows.map((item, index) => { const isBanned = banned.has(item.ip) || item.decisionType === "ban"; return <tr key={`${item.id || item.ip}-${index}`} onClick={() => item.ip && onSelectIp(item.ip)} tabIndex={0} onKeyDown={(event) => event.key === "Enter" && item.ip && onSelectIp(item.ip)}><td>{formatTime(item.createdAt)}</td><td><strong>{item.ip || "unknown"}</strong></td><td>{item.country || "Unknown"}</td><td title={item.scenario}>{readableScenario(item.scenario)}</td><td>{item.asn || item.asName || "—"}</td><td>{item.count || 1}</td><td><span className={`eventStatus ${isBanned ? "blocked" : "observed"}`}>{isBanned ? "Blocked" : "Observed"}</span></td></tr>; })}
+        {rows.map((item, index) => { const isBanned = banned.has(item.ip) || item.decisionType === "ban"; const selected = selectedEvent === item; return <tr className={selected ? "selected" : ""} aria-selected={selected} key={`${item.id || item.ip}-${index}`} onClick={() => item.ip && onSelectEvent(item)} tabIndex={0} onKeyDown={(event) => event.key === "Enter" && item.ip && onSelectEvent(item)}><td>{formatTime(item.createdAt)}</td><td><strong>{item.ip || "unknown"}</strong></td><td>{item.country || "Unknown"}</td><td title={item.scenario}>{readableScenario(item.scenario)}</td><td>{item.asn || item.asName || "—"}</td><td>{item.count || 1}</td><td><span className={`eventStatus ${isBanned ? "blocked" : "observed"}`}>{isBanned ? "Blocked" : "Observed"}</span></td></tr>; })}
         {!rows.length && <tr><td colSpan="7" className="eventTableEmpty">No events match the current filters.</td></tr>}
       </tbody></table></div>
     </section>
   );
+}
+
+function EventDetailDrawer({ event, activeBans, onClose, onInvestigate }) {
+  const ban = activeBans.find((item) => (item.ip || item.value) === event.ip);
+  const blocked = Boolean(ban || event.decisionType === "ban");
+  useEffect(() => {
+    const closeOnEscape = (keyboardEvent) => keyboardEvent.key === "Escape" && onClose();
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+  return (
+    <aside className="eventDrawer" aria-label={`Event details for ${event.ip}`}>
+      <header><div><span>Selected event</span><h3>{event.ip}</h3><p>{event.country || "Unknown location"}{event.city ? ` · ${event.city}` : ""}</p></div><button type="button" onClick={onClose} aria-label="Close event details"><X size={18} /></button></header>
+      <div className="eventDrawerStatus"><span className={`eventStatus ${blocked ? "blocked" : "observed"}`}>{blocked ? "Blocked" : "Observed"}</span><time>{formatRelativeTime(event.createdAt)}</time></div>
+      <dl><div><dt>Scenario</dt><dd>{readableScenario(event.scenario)}</dd></div><div><dt>Attempts</dt><dd>{event.count || 1}</dd></div><div><dt>Country</dt><dd>{event.country || "Unknown"}</dd></div><div><dt>ASN / provider</dt><dd>{event.asn || event.asName || "Not available"}</dd></div><div><dt>Decision</dt><dd>{ban?.type || event.decisionType || "observe"}</dd></div><div><dt>Detected</dt><dd>{new Date(event.createdAt).toLocaleString()}</dd></div></dl>
+      <button type="button" className="investigateEvent" onClick={() => onInvestigate(event.ip)}>Investigate IP <ArrowUpRight size={16} /></button>
+    </aside>
+  );
+}
+
+function buildTrendBuckets(attacks, bucketCount) {
+  if (!attacks.length) return Array.from({ length: bucketCount }, (_, index) => ({ key: index, label: "—", count: 0 }));
+  let newest = 0;
+  let oldest = Number.POSITIVE_INFINITY;
+  for (const item of attacks) {
+    const timestamp = new Date(item.createdAt).getTime();
+    if (!Number.isFinite(timestamp)) continue;
+    newest = Math.max(newest, timestamp);
+    oldest = Math.min(oldest, timestamp);
+  }
+  if (!Number.isFinite(oldest) || newest <= oldest) oldest = newest - 3600000;
+  const step = Math.max(60000, (newest - oldest) / bucketCount);
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const timestamp = oldest + index * step;
+    return { key: index, label: new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), count: 0 };
+  });
+  for (const item of attacks) {
+    const timestamp = new Date(item.createdAt).getTime();
+    if (!Number.isFinite(timestamp)) continue;
+    const index = Math.min(bucketCount - 1, Math.max(0, Math.floor((timestamp - oldest) / step)));
+    buckets[index].count += Number(item.count) || 1;
+  }
+  return buckets;
 }
 
 function buildFilterOptions(attacks) {

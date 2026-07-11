@@ -34,6 +34,9 @@ The Live map uses `LAPI alerts` as its primary source. In `Auto` mode it falls b
 - Browser-persisted interval, ranking panel selections, and timeline row count.
 - `Active Bans` metric in the top-left summary area.
 - Ranking panels for `Countries`, `IPs`, `Scenarios`, and `Bans`.
+- Search and live filters for source IP, ASN, country, scenario, and alert age.
+- Filter-aware attack activity chart and recent security event table.
+- Inline event detail drawer with a direct path into full IP investigation.
 - Active banned IP list with remaining ban duration.
 - Timeline grouped by source IP and minute, expandable up to three rows.
 - Cached and server-paginated `Decisions` view for CrowdSec enforcement and blocklist data.
