@@ -22,7 +22,7 @@ http://192.168.192.101:8088
 
 ## Data Sources
 
-The Live map can read `Auto`, `LAPI alerts`, `cscli`, and `Sample`. Enforcement decisions are intentionally separated into the paginated `Decisions` view because blocklists are not detected attacks.
+The Live map uses `LAPI alerts` as its primary source. In `Auto` mode it falls back to `cscli` and finally to `Sample` if LAPI is unavailable. Enforcement decisions are intentionally separated into the paginated `Decisions` view because blocklists are not detected attacks.
 
 ## Dashboard Features
 
@@ -36,32 +36,12 @@ The Live map can read `Auto`, `LAPI alerts`, `cscli`, and `Sample`. Enforcement 
 - Cached and server-paginated `Decisions` view for CrowdSec enforcement and blocklist data.
 - IP Investigation panel inspired by `csfind`: on-demand log hit counts, 403 counts, sampled log lines, and a paginated `See all` log view with search, filter, and sorting.
 
-## Source Option A: `cscli` From an Existing CrowdSec Container
-
-This is the simplest option if your CrowdSec container can already run `cscli alerts list -o json`. Set the container name in `docker-compose.yml`:
-
-```yaml
-environment:
-  DATA_SOURCE: "cscli"
-  CROWDSEC_CONTAINER: "crowdsec"
-  CSCLI_COMMAND: "cscli alerts list -o json --limit 0"
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock:ro
-```
-
-Check the command manually:
-
-```bash
-docker exec crowdsec cscli alerts list -o json --limit 5
-```
-
-## Source Option B: LAPI Alerts
+## Source Option A: LAPI Alerts (Primary)
 
 Alerts are ideal for the map because CrowdSec often includes `source.latitude`, `source.longitude`, `source.cn`, and `source.as_name`.
 
-1. Register a machine for CrowdSec Map.
-2. Validate the machine in CrowdSec.
-3. Set `LAPI_URL`, `LAPI_LOGIN`, and `LAPI_PASSWORD`.
+1. Register a machine directly on the CrowdSec LAPI host.
+2. Set `LAPI_URL`, `LAPI_LOGIN`, and `LAPI_PASSWORD`.
 
 Example:
 
@@ -71,6 +51,25 @@ environment:
   LAPI_URL: "http://crowdsec:8080"
   LAPI_LOGIN: "crowdsec-map"
   LAPI_PASSWORD: "your-password"
+```
+
+## Source Option B: `cscli` Fallback
+
+In `Auto` mode, CrowdSec Map uses `cscli` only when LAPI Alerts cannot be loaded. This requires access to the Docker socket and a CrowdSec container that can run `cscli alerts list -o json`:
+
+```yaml
+environment:
+  DATA_SOURCE: "auto"
+  CROWDSEC_CONTAINER: "crowdsec"
+  CSCLI_COMMAND: "cscli alerts list -o json --limit 0"
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+Check the fallback command manually:
+
+```bash
+docker exec crowdsec cscli alerts list -o json --limit 5
 ```
 
 ## Decisions View
@@ -85,13 +84,13 @@ environment:
 
 ## Guided Setup
 
-For an existing Docker-based CrowdSec installation, the helper can create the Alerts machine login, create the Decisions bouncer key, and detect file-based Investigation logs from `acquis.yaml`/`acquis.d`:
+For an existing Docker-based or native Linux CrowdSec installation, the helper can create the Alerts machine login, create the Decisions bouncer key, and detect file-based Investigation logs from `acquis.yaml`/`acquis.d`:
 
 ```bash
 sudo scripts/autosetup-crowdsec-map.sh
 ```
 
-It automatically detects the CrowdSec container, internal LAPI URL, and file-based Acquisition logs. Ambiguous values are requested interactively and can also be overridden with command-line options. It keeps secrets in a mode-`600` `.env` and does not rotate existing credentials unless explicitly requested. See the [Setup assistant and CTI key guide](docs/setup-assistant.md).
+It automatically detects a Docker-based or native Linux CrowdSec installation, the internal LAPI URL, and file-based Acquisition logs. Ambiguous values are requested interactively and can also be overridden with command-line options. It keeps secrets in a mode-`600` `.env` and does not rotate existing credentials unless explicitly requested. See the [Setup assistant and CTI key guide](docs/setup-assistant.md).
 
 ## Environment Variables
 

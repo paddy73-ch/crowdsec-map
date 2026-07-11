@@ -1,6 +1,6 @@
 # Setup assistant
 
-The setup helper prepares CrowdSec Map for an existing Docker-based CrowdSec installation:
+The setup helper prepares CrowdSec Map for an existing Docker-based or native Linux CrowdSec installation:
 
 ```bash
 sudo scripts/autosetup-crowdsec-map.sh
@@ -19,6 +19,16 @@ The command checks environment values and the corresponding CrowdSec registratio
 ## Acquisition log detection
 
 The helper automatically detects the running container that provides `cscli`, reads the active LAPI listen port, and builds the internal Docker URL. If detection is ambiguous, it asks for the correct value. `--container` and `--lapi-url` remain available as explicit overrides.
+
+If no CrowdSec container is found but a working host `cscli` is available, native mode is selected automatically. It can also be forced with `--native`. In native mode:
+
+- machine and bouncer credentials are created with the host `cscli`;
+- Acquisition paths are read directly from the host configuration;
+- host log files are mounted read-only into CrowdSec Map;
+- `host.docker.internal:host-gateway` is added to the generated Compose file;
+- the default Map URL becomes `http://host.docker.internal:<detected-port>`.
+
+The native LAPI must listen on an address reachable from Docker. If CrowdSec is bound only to `127.0.0.1` or `::1`, the helper prints a warning. Adjust `api.server.listen_uri` in CrowdSec before starting the Map and restrict access with the host firewall.
 
 File acquisition detection is enabled by default. It reads paths from the legacy `/etc/crowdsec/acquis.yaml` and the preferred `/etc/crowdsec/acquis.d/*.yaml` files inside the CrowdSec container. Use `--no-detect-logs` to skip it.
 
@@ -60,6 +70,7 @@ unset CTI_KEY
 
 ```text
 --container NAME       Override automatic CrowdSec container detection
+--native               Force native host CrowdSec mode
 --lapi-url URL         Override the detected internal LAPI URL
 --env-file PATH        Environment file to update
 --override-file PATH   Generated Compose override

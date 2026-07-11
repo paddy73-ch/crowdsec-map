@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 CONTAINER=""
+MODE=""
 ENV_FILE=".env"
 OVERRIDE_FILE="docker-compose.autosetup.yml"
 LAPI_URL=""
@@ -15,6 +16,7 @@ usage() {
 Usage: scripts/autosetup-crowdsec-map.sh [options]
 
   --container NAME       Override automatic CrowdSec container detection
+  --native               Use a native host installation of CrowdSec
   --lapi-url URL         Override the automatically detected internal LAPI URL
   --env-file PATH        Environment file (default: .env)
   --override-file PATH   Compose override for detected logs
@@ -32,7 +34,8 @@ EOF
 
 while (($#)); do
   case "$1" in
-    --container) CONTAINER="${2:?missing container name}"; shift 2 ;;
+    --container) CONTAINER="${2:?missing container name}"; MODE="docker"; shift 2 ;;
+    --native) MODE="native"; shift ;;
     --lapi-url) LAPI_URL="${2:?missing LAPI URL}"; shift 2 ;;
     --env-file) ENV_FILE="${2:?missing env path}"; shift 2 ;;
     --override-file) OVERRIDE_FILE="${2:?missing override path}"; shift 2 ;;
@@ -48,13 +51,14 @@ while (($#)); do
 done
 
 say() { printf '\n==> %s\n' "$*"; }
+warn() { printf 'Warning: %s\n' "$*" >&2; }
 fail() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || fail "Required command '$1' was not found."; }
 
 for command in docker awk sed mktemp grep; do need "$command"; done
 
-detect_container() {
-  local name answer candidate_count=0
+detect_installation() {
+  local name answer candidate_count=0 native_available=false
   local -a candidates=()
   while IFS= read -r name; do
     if docker exec "$name" cscli version >/dev/null 2>&1; then
@@ -63,30 +67,50 @@ detect_container() {
     fi
   done < <(docker ps --format '{{.Names}}')
 
-  if ((candidate_count == 1)); then
+  command -v cscli >/dev/null 2>&1 && cscli version >/dev/null 2>&1 && native_available=true
+
+  if ((candidate_count == 1)) && [[ "$native_available" == false ]]; then
+    MODE="docker"
     CONTAINER="${candidates[0]}"
+  elif ((candidate_count == 0)) && [[ "$native_available" == true ]]; then
+    MODE="native"
+  elif ((candidate_count > 0)) && [[ "$native_available" == true && -t 0 ]]; then
+    printf 'Both native CrowdSec and Docker candidates were found:\n'
+    select name in "native cscli" "${candidates[@]}"; do
+      [[ -n "$name" ]] || continue
+      if [[ "$name" == "native cscli" ]]; then MODE="native"; else MODE="docker"; CONTAINER="$name"; fi
+      break
+    done
   elif ((candidate_count > 1)); then
     if [[ -t 0 ]]; then
       printf 'Multiple containers with cscli were found:\n'
-      select name in "${candidates[@]}"; do [[ -n "$name" ]] && { CONTAINER="$name"; break; }; done
+      select name in "${candidates[@]}"; do [[ -n "$name" ]] && { MODE="docker"; CONTAINER="$name"; break; }; done
     else
       fail "Multiple CrowdSec candidates found: ${candidates[*]}. Use --container NAME."
     fi
+  elif ((candidate_count == 1)); then
+    MODE="docker"
+    CONTAINER="${candidates[0]}"
   elif [[ -t 0 ]]; then
-    read -rp "CrowdSec container name: " CONTAINER
+    read -rp "Installation type [docker/native]: " MODE
+    if [[ "$MODE" == "docker" ]]; then read -rp "CrowdSec container name: " CONTAINER; fi
   else
-    fail "No running container with cscli was found. Use --container NAME."
+    fail "No CrowdSec installation was detected. Use --container NAME or --native."
   fi
 
-  if [[ -t 0 ]]; then
+  if [[ "$MODE" == "docker" && -t 0 ]]; then
     read -rp "Use detected CrowdSec container '$CONTAINER'? [Y/n] " answer
     if [[ "$answer" =~ ^[Nn]$ ]]; then read -rp "CrowdSec container name: " CONTAINER; fi
   fi
 }
 
+cscli_run() {
+  if [[ "$MODE" == "docker" ]]; then docker exec "$CONTAINER" cscli "$@"; else cscli "$@"; fi
+}
+
 detect_lapi_url() {
   local listen port answer
-  listen="$(docker exec "$CONTAINER" cscli config show-yaml 2>/dev/null | awk '
+  listen="$(cscli_run config show-yaml 2>/dev/null | awk '
     /^api:/ { in_api=1; next }
     in_api && /^[^[:space:]]/ { in_api=0 }
     in_api && /^[[:space:]]+server:/ { in_server=1; next }
@@ -95,16 +119,30 @@ detect_lapi_url() {
   ')"
   port="${listen##*:}"
   [[ "$port" =~ ^[0-9]+$ ]] || port=8080
-  LAPI_URL="http://${CONTAINER}:${port}"
+  if [[ "$MODE" == "docker" ]]; then
+    LAPI_URL="http://${CONTAINER}:${port}"
+  else
+    LAPI_URL="http://host.docker.internal:${port}"
+    if [[ "$listen" == 127.0.0.1:* || "$listen" == localhost:* || "$listen" == \[::1\]:* ]]; then
+      warn "Native LAPI listens on '$listen'. CrowdSec Map cannot reach this loopback address from Docker; change listen_uri to a host-accessible address before starting the Map."
+    fi
+  fi
   if [[ -t 0 ]]; then
     read -rp "Use detected internal LAPI URL '$LAPI_URL'? [Y/n] " answer
     if [[ "$answer" =~ ^[Nn]$ ]]; then read -rp "LAPI URL: " LAPI_URL; fi
   fi
 }
 
-if [[ -z "$CONTAINER" ]]; then detect_container; fi
-docker inspect "$CONTAINER" >/dev/null 2>&1 || fail "CrowdSec container '$CONTAINER' was not found."
-docker exec "$CONTAINER" cscli version >/dev/null 2>&1 || fail "cscli is unavailable in '$CONTAINER'."
+if [[ -z "$MODE" ]]; then detect_installation; fi
+if [[ "$MODE" == "docker" ]]; then
+  docker inspect "$CONTAINER" >/dev/null 2>&1 || fail "CrowdSec container '$CONTAINER' was not found."
+  docker exec "$CONTAINER" cscli version >/dev/null 2>&1 || fail "cscli is unavailable in '$CONTAINER'."
+elif [[ "$MODE" == "native" ]]; then
+  command -v cscli >/dev/null 2>&1 || fail "Native cscli was not found in PATH. Run this script with sudo or use --container NAME."
+  cscli version >/dev/null 2>&1 || fail "Native cscli is not usable."
+else
+  fail "Installation mode must be docker or native."
+fi
 if [[ -z "$LAPI_URL" ]]; then detect_lapi_url; fi
 env_value() {
   [[ -f "$ENV_FILE" ]] || return 0
@@ -125,7 +163,7 @@ set_env() {
 }
 
 registered() {
-  docker exec "$CONTAINER" cscli "$1" list -o json 2>/dev/null | grep -Fq "\"crowdsec-map\""
+  cscli_run "$1" list -o json 2>/dev/null | grep -Fq "\"crowdsec-map\""
 }
 
 configure_machine() {
@@ -136,9 +174,9 @@ configure_machine() {
   fi
   if registered machines; then
     [[ "$ROTATE" == true ]] || fail "Machine crowdsec-map exists but its password is unavailable. Restore .env or use --rotate."
-    docker exec "$CONTAINER" cscli machines delete crowdsec-map >/dev/null
+    cscli_run machines delete crowdsec-map >/dev/null
   fi
-  credentials="$(docker exec "$CONTAINER" cscli machines add crowdsec-map --auto --file -)"
+  credentials="$(cscli_run machines add crowdsec-map --auto --file -)"
   login="$(printf '%s\n' "$credentials" | awk -F: '$1 ~ /^[[:space:]]*login$/ {sub(/^[^:]*:[[:space:]]*/, ""); print; exit}')"
   password="$(printf '%s\n' "$credentials" | awk -F: '$1 ~ /^[[:space:]]*password$/ {sub(/^[^:]*:[[:space:]]*/, ""); print; exit}')"
   [[ -n "$login" && -n "$password" ]] || fail "Created machine credentials could not be parsed."
@@ -155,23 +193,45 @@ configure_bouncer() {
   fi
   if registered bouncers; then
     [[ "$ROTATE" == true ]] || fail "Bouncer crowdsec-map exists but its one-time key is unavailable. Restore .env or use --rotate."
-    docker exec "$CONTAINER" cscli bouncers delete crowdsec-map --ignore-missing >/dev/null
+    cscli_run bouncers delete crowdsec-map --ignore-missing >/dev/null
   fi
   if command -v openssl >/dev/null 2>&1; then
     key="$(openssl rand -hex 32)"
   else
-    key="$(docker exec "$CONTAINER" sh -c 'od -An -N32 -tx1 /dev/urandom | tr -d " \n"')"
+    key="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
   fi
-  docker exec "$CONTAINER" cscli bouncers add crowdsec-map --key "$key" >/dev/null
+  cscli_run bouncers add crowdsec-map --key "$key" >/dev/null
   set_env LAPI_API_KEY "$key"
   printf 'Created the crowdsec-map Decisions bouncer.\n'
 }
 
 read_acquisition_paths() {
-  docker exec "$CONTAINER" sh -c '
-    for file in /etc/crowdsec/acquis.yaml /etc/crowdsec/acquis.d/*.yaml; do
-      [ -f "$file" ] || continue
-      awk '\''
+  if [[ "$MODE" == "docker" ]]; then
+    docker exec "$CONTAINER" sh -c '
+      for file in /etc/crowdsec/acquis.yaml /etc/crowdsec/acquis.d/*.yaml; do
+        [ -f "$file" ] || continue
+        awk '\''
+          /^[[:space:]]*(filename|filenames):[[:space:]]*[^#[:space:]]/ {
+            line=$0; sub(/^[^:]*:[[:space:]]*/, "", line); sub(/[[:space:]]+#.*/, "", line); gsub(/"/, "", line); print line; in_files=0; next
+          }
+          /^[[:space:]]*filenames:[[:space:]]*$/ { in_files=1; next }
+          in_files && /^[[:space:]]*-[[:space:]]*/ {
+            line=$0; sub(/^[[:space:]]*-[[:space:]]*/, "", line); sub(/[[:space:]]+#.*/, "", line); gsub(/"/, "", line); print line; next
+          }
+          in_files && /^[^[:space:]-]/ { in_files=0 }
+        '\'' "$file"
+      done
+    '
+  else
+    local config acquisition_path acquisition_dir file
+    config="$(cscli_run config show-yaml 2>/dev/null)"
+    acquisition_path="$(printf '%s\n' "$config" | awk '/^[[:space:]]+acquisition_path:/ {sub(/^[^:]*:[[:space:]]*/, ""); gsub(/["'"'"']/, ""); print; exit}')"
+    acquisition_dir="$(printf '%s\n' "$config" | awk '/^[[:space:]]+acquisition_dir:/ {sub(/^[^:]*:[[:space:]]*/, ""); gsub(/["'"'"']/, ""); print; exit}')"
+    acquisition_path="${acquisition_path:-/etc/crowdsec/acquis.yaml}"
+    acquisition_dir="${acquisition_dir:-/etc/crowdsec/acquis.d}"
+    for file in "$acquisition_path" "$acquisition_dir"/*.yaml; do
+      [[ -f "$file" ]] || continue
+      awk '
         /^[[:space:]]*(filename|filenames):[[:space:]]*[^#[:space:]]/ {
           line=$0; sub(/^[^:]*:[[:space:]]*/, "", line); sub(/[[:space:]]+#.*/, "", line); gsub(/"/, "", line); print line; in_files=0; next
         }
@@ -180,27 +240,43 @@ read_acquisition_paths() {
           line=$0; sub(/^[[:space:]]*-[[:space:]]*/, "", line); sub(/[[:space:]]+#.*/, "", line); gsub(/"/, "", line); print line; next
         }
         in_files && /^[^[:space:]-]/ { in_files=0 }
-      '\'' "$file"
+      ' "$file"
     done
-  ' | awk '{gsub(/\047/, "")} NF && !seen[$0]++'
+  fi | awk '{gsub(/\047/, "")} NF && !seen[$0]++'
 }
 
 detect_logs() {
-  local paths mounts path type source destination best_source best_dest best_length relative
+  local paths mounts path type source destination best_source best_dest best_length relative root prefix extra_hosts=""
   local index=0 env_paths="" volumes=""
   paths="$(read_acquisition_paths)"
   [[ -n "$paths" ]] || { printf 'No file acquisitions found.\n'; return; }
-  mounts="$(docker inspect --format '{{range .Mounts}}{{printf "%s\t%s\t%s\n" .Type .Source .Destination}}{{end}}' "$CONTAINER")"
+  if [[ "$MODE" == "docker" ]]; then
+    mounts="$(docker inspect --format '{{range .Mounts}}{{printf "%s\t%s\t%s\n" .Type .Source .Destination}}{{end}}' "$CONTAINER")"
+  else
+    mounts=""
+    extra_hosts=$'    extra_hosts:\n      - "host.docker.internal:host-gateway"\n'
+  fi
   while IFS= read -r path; do
     best_source=""; best_dest=""; best_length=0
-    while IFS=$'\t' read -r type source destination; do
-      [[ "$type" == "bind" ]] || continue
-      if [[ "$path" == "$destination" || "$path" == "$destination"/* ]] && ((${#destination} > best_length)); then
-        best_source="$source"; best_dest="$destination"; best_length=${#destination}
+    if [[ "$MODE" == "docker" ]]; then
+      while IFS=$'\t' read -r type source destination; do
+        [[ "$type" == "bind" ]] || continue
+        if [[ "$path" == "$destination" || "$path" == "$destination"/* ]] && ((${#destination} > best_length)); then
+          best_source="$source"; best_dest="$destination"; best_length=${#destination}
+        fi
+      done <<< "$mounts"
+    else
+      prefix="$(printf '%s' "$path" | sed 's/[*?\[].*$//')"
+      if [[ "$prefix" != "$path" ]]; then
+        root="${prefix%/}"
+        [[ -d "$root" ]] || root="$(dirname "$root")"
+      else
+        root="$path"
       fi
-    done <<< "$mounts"
+      if [[ -e "$root" ]]; then best_source="$root"; best_dest="$root"; fi
+    fi
     if [[ -z "$best_source" ]]; then
-      printf 'Skipped %s (not backed by a Docker bind mount)\n' "$path"
+      printf 'Skipped %s (source path is not accessible to CrowdSec Map)\n' "$path"
       continue
     fi
     relative="${path#"$best_dest"}"
@@ -214,7 +290,7 @@ detect_logs() {
 # Generated by scripts/autosetup-crowdsec-map.sh
 services:
   crowdsec-map:
-    environment:
+${extra_hosts}    environment:
       INVESTIGATION_LOG_PATHS: "${env_paths}"
     volumes:
 ${volumes%$'\n'}
@@ -224,7 +300,8 @@ EOF
 
 check_setup() {
   local errors=0 value
-  printf '%-28s %s\n' "CrowdSec container" "$CONTAINER"
+  printf '%-28s %s\n' "Installation type" "$MODE"
+  printf '%-28s %s\n' "CrowdSec container" "${CONTAINER:-native}"
   printf '%-28s %s\n' "Detected LAPI URL" "$LAPI_URL"
   for key in LAPI_URL LAPI_LOGIN LAPI_PASSWORD LAPI_API_KEY CTI_API_KEY; do
     value="$(env_value "$key")"
@@ -249,6 +326,16 @@ configure_machine
 configure_bouncer
 if [[ -n "$CTI_KEY" ]]; then set_env CTI_API_KEY "$CTI_KEY"; printf 'Stored CTI_API_KEY.\n'; fi
 if [[ "$DETECT_LOGS" == true ]]; then say "Detecting file acquisitions"; detect_logs; fi
+if [[ "$MODE" == "native" && ! -f "$OVERRIDE_FILE" ]]; then
+  cat > "$OVERRIDE_FILE" <<'EOF'
+# Generated by scripts/autosetup-crowdsec-map.sh
+services:
+  crowdsec-map:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+EOF
+  printf 'Wrote %s with native-host connectivity.\n' "$OVERRIDE_FILE"
+fi
 say "Configuration summary"
 check_setup || true
 if [[ -f "$OVERRIDE_FILE" ]]; then
