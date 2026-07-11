@@ -3011,3 +3011,201 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dashboard command-center layout */
+.appShell {
+  grid-template-columns: 304px minmax(0, 1fr);
+}
+
+.sidebar {
+  gap: 12px;
+  padding: 18px;
+  background: #0a151a;
+}
+
+.brand {
+  min-height: 44px;
+  padding-bottom: 4px;
+}
+
+.metricGrid {
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.metric {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 52px;
+  padding: 10px 12px;
+}
+
+.metric strong {
+  grid-column: auto;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  min-height: 132px;
+  padding: 12px;
+}
+
+.anomalyCard {
+  display: flex;
+  gap: 10px;
+  border: 1px solid rgba(255, 184, 77, 0.25);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: #ffbd58;
+  background: rgba(85, 53, 15, 0.28);
+}
+
+.anomalyCard svg { flex: 0 0 auto; margin-top: 2px; }
+.anomalyCard strong { color: #ffd28c; font-size: 12px; }
+.anomalyCard p { margin-top: 3px; color: #bda98b; font-size: 11px; line-height: 1.4; }
+
+.mapStage {
+  grid-template-rows: auto auto minmax(300px, 1fr) auto auto;
+}
+
+.toolbar {
+  min-height: 64px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(151, 181, 176, 0.12);
+  background: rgba(8, 17, 22, 0.92);
+}
+
+.toolbar h2 { font-size: 21px; }
+.toolbar .hiddenMenuTrigger { top: 78px; right: 24px; }
+
+.liveFilterBar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(150px, .8fr) minmax(140px, .7fr) minmax(150px, .75fr) auto auto;
+  align-items: end;
+  gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(151, 181, 176, 0.1);
+  background: rgba(9, 20, 25, 0.82);
+}
+
+.liveFilterBar label { display: grid; gap: 5px; min-width: 0; color: #78918d; font-size: 10px; font-weight: 800; }
+.liveFilterBar input,
+.liveFilterBar select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid rgba(151, 181, 176, 0.16);
+  border-radius: 7px;
+  outline: none;
+  padding: 0 10px;
+  color: #dceae7;
+  background: #0d1d23;
+  font: inherit;
+  font-size: 12px;
+}
+
+.filterSearch { position: relative; align-self: end; }
+.filterSearch svg { position: absolute; z-index: 1; left: 11px; bottom: 10px; color: #78918d; }
+.filterSearch input { padding-left: 35px; }
+.filterResult { display: flex; align-items: center; gap: 5px; height: 36px; color: #809793; font-size: 11px; white-space: nowrap; }
+.filterResult svg,
+.filterResult strong { color: #68ddc6; }
+.clearFilters { height: 36px; border: 0; padding: 0 7px; color: #68ddc6; background: transparent; cursor: pointer; font-size: 11px; font-weight: 800; }
+.clearFilters:disabled { color: #526561; cursor: default; }
+
+.mapWrap {
+  margin: 10px 20px 0;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  padding: 0;
+  background: #091c24;
+}
+
+.ageLegend { top: 132px; right: 30px; }
+
+.timelineDock {
+  padding: 8px 20px;
+  border-bottom: 1px solid rgba(151, 181, 176, 0.08);
+}
+
+.timeline { grid-template-columns: repeat(var(--timeline-columns, 9), minmax(118px, 1fr)); }
+.timeline article { min-width: 118px; padding: 7px 9px; }
+.timelineControls { right: 20px; bottom: 8px; }
+
+.eventTablePanel {
+  min-height: 210px;
+  margin: 0 20px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(151, 181, 176, 0.14);
+  border-radius: 8px;
+  background: rgba(10, 23, 28, 0.92);
+}
+
+.eventTablePanel > header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid rgba(151, 181, 176, 0.1); }
+.eventTablePanel h3 { margin: 0; font-size: 13px; }
+.eventTablePanel header p,
+.eventTablePanel header > span { margin-top: 2px; color: #78918d; font-size: 10px; }
+.eventTableScroll { max-height: 230px; overflow: auto; }
+.eventTable { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; }
+.eventTable th,
+.eventTable td { overflow: hidden; border-bottom: 1px solid rgba(151, 181, 176, 0.08); padding: 7px 10px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.eventTable th { position: sticky; top: 0; z-index: 1; color: #78918d; background: #0b191e; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.eventTable th:nth-child(1) { width: 72px; }
+.eventTable th:nth-child(2) { width: 138px; }
+.eventTable th:nth-child(3) { width: 105px; }
+.eventTable th:nth-child(6) { width: 72px; }
+.eventTable th:nth-child(7) { width: 82px; }
+.eventTable tbody tr { cursor: pointer; transition: background 120ms ease; }
+.eventTable tbody tr:hover,
+.eventTable tbody tr:focus { outline: 0; background: rgba(104, 221, 198, 0.07); }
+.eventTable td strong { color: #e8f3f1; }
+.eventStatus { display: inline-flex; align-items: center; min-height: 20px; border-radius: 4px; padding: 0 6px; font-size: 10px; font-weight: 800; }
+.eventStatus.blocked { color: #77e19c; background: rgba(36, 142, 76, 0.2); }
+.eventStatus.observed { color: #ffcf6e; background: rgba(171, 111, 22, 0.22); }
+.eventTableEmpty { height: 74px; color: #78918d; text-align: center !important; }
+
+.themeLight .liveFilterBar,
+.themeLight .toolbar { background: rgba(242, 250, 248, 0.96); }
+.themeLight .liveFilterBar input,
+.themeLight .liveFilterBar select,
+.themeLight .eventTablePanel { color: #122321; border-color: rgba(39, 87, 82, 0.14); background: rgba(255,255,255,.85); }
+.themeLight .eventTable th { background: #edf7f5; }
+.themeLight .eventTable td strong { color: #122321; }
+.themeLight .anomalyCard { background: rgba(255, 224, 168, .5); }
+
+@media (max-width: 1180px) {
+  .appShell { grid-template-columns: 250px minmax(0, 1fr); }
+  .liveFilterBar { grid-template-columns: minmax(200px, 1fr) repeat(3, minmax(120px, .65fr)); }
+  .filterResult,
+  .clearFilters { display: none; }
+  .toolbarStatus span:first-child { display: none; }
+}
+
+@media (max-width: 900px) {
+  .appShell { display: block; height: auto; overflow: visible; }
+  .sidebar { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; border-right: 0; border-bottom: 1px solid rgba(151,181,176,.14); }
+  .brand,
+  .metricGrid { grid-column: 1 / -1; }
+  .metricGrid { grid-template-columns: repeat(4, 1fr); }
+  .anomalyCard { grid-column: 1 / -1; }
+  .mapStage { height: auto; min-height: 0; overflow: visible; }
+  .mapWrap { height: 420px; }
+  .liveFilterBar { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 620px) {
+  .sidebar { display: none; }
+  body,
+  .appShell,
+  .mapStage { max-width: 100vw; overflow-x: hidden; }
+  .toolbarControls { width: 100%; min-width: 0; }
+  .viewSwitch { grid-auto-flow: initial; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; min-width: 0; }
+  .viewSwitch button { width: 100%; min-width: 0; padding-inline: 6px; }
+  .toolbarStatus { min-width: 0; white-space: normal; }
+  .liveFilterBar { grid-template-columns: 1fr; padding: 10px 14px; }
+  .mapWrap { height: 310px; margin: 10px 14px 0; }
+  .timelineDock { padding-inline: 14px; }
+  .eventTablePanel { margin-inline: 14px; }
+  .eventTable { min-width: 760px; }
+  .ageLegend { top: auto; right: 20px; bottom: 320px; left: auto; }
+}

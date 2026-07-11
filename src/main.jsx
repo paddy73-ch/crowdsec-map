@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Globe2, Map as MapIcon, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, X } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, ChevronDown, ChevronUp, Copy, Crosshair, Filter, Globe2, Map as MapIcon, Moon, RefreshCcw, Search, ShieldAlert, Sun, Timer, UserRoundSearch, X } from "lucide-react";
 import { geoEqualEarth, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
@@ -60,6 +60,7 @@ function App() {
   const [error, setError] = useState("");
   const [metricMode, setMetricMode] = useState("");
   const [selectedIp, setSelectedIp] = useState("");
+  const [filters, setFilters] = useState({ query: "", country: "all", scenario: "all", age: "all" });
   const requestControllerRef = useRef(null);
 
   const loadData = useCallback(async () => {
@@ -99,12 +100,14 @@ function App() {
     return () => window.clearInterval(interval);
   }, [refreshSeconds, loadData]);
 
-  const attacks = data?.alerts || [];
+  const attacks = data?.alerts || EMPTY_RANK_ITEMS;
   const totals = data?.totals || {};
+  const filterOptions = useMemo(() => buildFilterOptions(attacks), [attacks]);
+  const filteredAttacks = useMemo(() => filterAttacks(attacks, filters), [attacks, filters]);
 
   return (
     <main className={`appShell theme${theme === "light" ? "Light" : "Dark"}`}>
-      <Sidebar data={data} totals={totals} onOpenMetric={setMetricMode} />
+      <Sidebar data={data} totals={totals} attacks={filteredAttacks} onOpenMetric={setMetricMode} />
       <section className="mapStage">
         <Toolbar
           view={view}
@@ -122,9 +125,11 @@ function App() {
         />
         {view === "live" ? (
           <>
-            <WorldMap attacks={attacks} initialLoading={loading && !data} />
+            <LiveFilterBar filters={filters} setFilters={setFilters} options={filterOptions} resultCount={filteredAttacks.length} totalCount={attacks.length} />
+            <WorldMap attacks={filteredAttacks} initialLoading={loading && !data} />
             <AgeLegend />
-            <Timeline attacks={attacks} error={error || data?.warning} />
+            <Timeline attacks={filteredAttacks} error={error || data?.warning} />
+            <EventTable attacks={filteredAttacks} activeBans={data?.activeBans || []} onSelectIp={setSelectedIp} />
           </>
         ) : view === "history" ? (
           <HistoryView />
@@ -149,8 +154,10 @@ function App() {
   );
 }
 
-function Sidebar({ data, totals, onOpenMetric }) {
+function Sidebar({ data, totals, attacks, onOpenMetric }) {
   const rankings = useMemo(() => buildRankings(data?.alerts || [], data?.activeBans || []), [data?.alerts, data?.activeBans]);
+  const uniqueAttackers = useMemo(() => new Set((data?.alerts || []).map((item) => item.ip).filter(Boolean)).size, [data?.alerts]);
+  const anomaly = useMemo(() => buildAnomaly(attacks), [attacks]);
 
   return (
     <aside className="sidebar">
@@ -163,17 +170,86 @@ function Sidebar({ data, totals, onOpenMetric }) {
       </div>
 
       <div className="metricGrid">
-        <Metric icon={<ShieldAlert />} label="Active Bans" value={totals.activeBans || 0} onClick={() => onOpenMetric("bans")} />
         <Metric icon={<Activity />} label="Current Alerts" value={totals.alerts || 0} onClick={() => onOpenMetric("alerts")} />
+        <Metric icon={<UserRoundSearch />} label="Unique Attackers" value={uniqueAttackers} onClick={() => onOpenMetric("alerts")} />
         <Metric icon={<Globe2 />} label="Countries" value={totals.countries || 0} onClick={() => onOpenMetric("countries")} />
-        <Metric icon={<Crosshair />} label="Scenarios" value={totals.scenarios || 0} onClick={() => onOpenMetric("scenarios")} />
+        <Metric icon={<ShieldAlert />} label="Active Bans" value={totals.activeBans || 0} onClick={() => onOpenMetric("bans")} />
       </div>
 
       <Panel rankings={rankings} initialMode="countries" storageKey="top" />
       <Panel rankings={rankings} initialMode="ips" storageKey="bottom" wide />
 
+      <div className="anomalyCard">
+        <AlertTriangle size={17} />
+        <div><strong>{anomaly ? "Activity concentration" : "No anomaly detected"}</strong><p>{anomaly || "Attack distribution is currently stable."}</p></div>
+      </div>
+
     </aside>
   );
+}
+
+function LiveFilterBar({ filters, setFilters, options, resultCount, totalCount }) {
+  const update = (field, value) => setFilters((current) => ({ ...current, [field]: value }));
+  const activeCount = Object.values(filters).filter((value) => value && value !== "all").length;
+  return (
+    <section className="liveFilterBar" aria-label="Live attack filters">
+      <label className="filterSearch"><Search size={16} /><input value={filters.query} onChange={(event) => update("query", event.target.value)} placeholder="Search IP, ASN, country or scenario" /></label>
+      <label><span>Scenario</span><select value={filters.scenario} onChange={(event) => update("scenario", event.target.value)}><option value="all">All scenarios</option>{options.scenarios.map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label><span>Country</span><select value={filters.country} onChange={(event) => update("country", event.target.value)}><option value="all">All countries</option>{options.countries.map((value) => <option key={value}>{value}</option>)}</select></label>
+      <label><span>Time range</span><select value={filters.age} onChange={(event) => update("age", event.target.value)}><option value="all">All current alerts</option><option value="15m">Last 15 minutes</option><option value="1h">Last hour</option><option value="24h">Last 24 hours</option></select></label>
+      <div className="filterResult"><Filter size={15} /><strong>{resultCount}</strong><span>of {totalCount}</span></div>
+      <button type="button" className="clearFilters" disabled={!activeCount} onClick={() => setFilters({ query: "", country: "all", scenario: "all", age: "all" })}>Clear {activeCount ? `(${activeCount})` : ""}</button>
+    </section>
+  );
+}
+
+function EventTable({ attacks, activeBans, onSelectIp }) {
+  const banned = useMemo(() => new Set(activeBans.map((item) => item.ip || item.value).filter(Boolean)), [activeBans]);
+  const rows = attacks.slice(0, 12);
+  return (
+    <section className="eventTablePanel">
+      <header><div><h3>Recent security events</h3><p>Click an event to investigate its source IP.</p></div><span>{attacks.length} matching</span></header>
+      <div className="eventTableScroll"><table className="eventTable"><thead><tr><th>Time</th><th>Source IP</th><th>Country</th><th>Scenario</th><th>ASN / provider</th><th>Attempts</th><th>Status</th></tr></thead><tbody>
+        {rows.map((item, index) => { const isBanned = banned.has(item.ip) || item.decisionType === "ban"; return <tr key={`${item.id || item.ip}-${index}`} onClick={() => item.ip && onSelectIp(item.ip)} tabIndex={0} onKeyDown={(event) => event.key === "Enter" && item.ip && onSelectIp(item.ip)}><td>{formatTime(item.createdAt)}</td><td><strong>{item.ip || "unknown"}</strong></td><td>{item.country || "Unknown"}</td><td title={item.scenario}>{readableScenario(item.scenario)}</td><td>{item.asn || item.asName || "—"}</td><td>{item.count || 1}</td><td><span className={`eventStatus ${isBanned ? "blocked" : "observed"}`}>{isBanned ? "Blocked" : "Observed"}</span></td></tr>; })}
+        {!rows.length && <tr><td colSpan="7" className="eventTableEmpty">No events match the current filters.</td></tr>}
+      </tbody></table></div>
+    </section>
+  );
+}
+
+function buildFilterOptions(attacks) {
+  const countriesSet = new Set();
+  const scenariosSet = new Set();
+  for (const item of attacks) {
+    if (item.country) countriesSet.add(item.country);
+    if (item.scenario) scenariosSet.add(item.scenario);
+  }
+  return { countries: [...countriesSet].sort(), scenarios: [...scenariosSet].sort() };
+}
+
+function filterAttacks(attacks, filters) {
+  const needle = filters.query.trim().toLowerCase();
+  const ageMs = filters.age === "15m" ? 900000 : filters.age === "1h" ? 3600000 : filters.age === "24h" ? 86400000 : 0;
+  const now = Date.now();
+  return attacks.filter((item) => {
+    if (filters.country !== "all" && item.country !== filters.country) return false;
+    if (filters.scenario !== "all" && item.scenario !== filters.scenario) return false;
+    if (ageMs && now - new Date(item.createdAt).getTime() > ageMs) return false;
+    if (!needle) return true;
+    return [item.ip, item.country, item.scenario, item.asn, item.asName].some((value) => String(value || "").toLowerCase().includes(needle));
+  });
+}
+
+function buildAnomaly(attacks) {
+  if (attacks.length < 8) return "";
+  const scenarios = groupCounts(attacks, "scenario");
+  const top = scenarios[0];
+  if (!top || top.count / attacks.length < 0.45) return "";
+  return `${readableScenario(top.label)} accounts for ${Math.round((top.count / attacks.length) * 100)}% of the filtered events.`;
+}
+
+function readableScenario(value) {
+  return String(value || "Unknown").replace(/^crowdsecurity\//, "").replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function Metric({ icon, label, value, onClick }) {
