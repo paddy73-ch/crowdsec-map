@@ -6,6 +6,9 @@
 
 CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decisions on a live world map. It shows attack origins, active bans, countries, source IPs, scenarios, and a compact timeline for recent activity.
 
+> [!IMPORTANT]
+> **Unofficial community project:** CrowdSec Map is an independent project and is not an official CrowdSec product, service, or solution. It is not developed, maintained, endorsed, or supported by CrowdSec. CrowdSec and related names or marks belong to their respective owners.
+
 ## Quick Start
 
 For local builds or the existing Proxmox/LXC deployment:
