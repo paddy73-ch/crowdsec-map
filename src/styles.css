@@ -3438,12 +3438,12 @@ p {
 
   .toolbarControls {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) 42px 42px;
     gap: 10px;
   }
 
   .toolbarControls .viewSwitch { grid-column: 1 / -1; }
-  .toolbarControls .themeToggle { grid-column: 1; justify-self: start; margin: 0; }
+  .toolbarControls .themeToggle { grid-column: 3; grid-row: 2; justify-self: end; margin: 0; }
 
   .decisionsView {
     gap: 10px;

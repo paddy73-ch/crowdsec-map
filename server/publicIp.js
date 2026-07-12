@@ -77,7 +77,7 @@ async function fetchPublicIp(provider) {
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
     const response = await fetch(provider, {
-      headers: { "User-Agent": "crowdsec-map/v0.3.22" },
+      headers: { "User-Agent": "crowdsec-map/v0.3.23" },
       signal: controller.signal
     });
     if (!response.ok) {

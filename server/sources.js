@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 let tokenCache = null;
 let decisionCache = null;
 const lapiHeaders = {
-  "User-Agent": "crowdsec-map/v0.3.22"
+  "User-Agent": "crowdsec-map/v0.3.23"
 };
 const DECISION_FIELDS = {
   value: (item) => item.ip || item.value,
