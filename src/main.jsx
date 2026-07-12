@@ -116,7 +116,7 @@ function App() {
   return (
     <main className={`appShell theme${theme === "light" ? "Light" : "Dark"}`}>
       <Sidebar data={data} totals={totals} attacks={filteredAttacks} onOpenMetric={setMetricMode} />
-      <section className="mapStage">
+      <section className={`mapStage mapStage--${view}`}>
         <Toolbar
           view={view}
           setView={setView}
@@ -355,8 +355,9 @@ function buildAnomaly(attacks) {
   if (attacks.length < 8) return "";
   const scenarios = groupCounts(attacks, "scenario");
   const top = scenarios[0];
-  if (!top || top.count / attacks.length < 0.45) return "";
-  return `${readableScenario(top.label)} accounts for ${Math.round((top.count / attacks.length) * 100)}% of the filtered events.`;
+  const totalAttempts = attacks.reduce((total, item) => total + Number(item.count || 1), 0);
+  if (!top || !totalAttempts || top.count / totalAttempts < 0.45) return "";
+  return `${readableScenario(top.label)} accounts for ${Math.round((top.count / totalAttempts) * 100)}% of the filtered attempts.`;
 }
 
 function readableScenario(value) {

@@ -682,8 +682,9 @@ p {
 
 .rankSwitch {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, max-content);
   align-items: center;
+  justify-content: space-between;
   gap: 2px;
   width: 100%;
   min-width: 0;
@@ -1017,10 +1018,6 @@ p {
   opacity: 0.62;
 }
 
-.toolbarLive .themeToggle {
-  margin-right: 28px;
-}
-
 .toolbar .hiddenMenuTrigger {
   position: absolute;
   top: 76px;
@@ -1308,7 +1305,7 @@ p {
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 12px;
   min-height: 0;
-  padding: 4px 28px 18px;
+  padding: 0 28px 18px;
 }
 
 .decisionsControls,
@@ -3160,7 +3157,7 @@ p {
 
 /* Dashboard command-center layout */
 .appShell {
-  grid-template-columns: 304px minmax(0, 1fr);
+  grid-template-columns: 330px minmax(0, 1fr);
 }
 
 .sidebar {
@@ -3489,4 +3486,31 @@ p {
 
   .decisionsPager { align-items: stretch; flex-direction: column; }
   .decisionsPager > div { justify-content: space-between; }
+}
+
+@media (min-width: 901px) {
+  .mapStage--history,
+  .mapStage--decisions {
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .toolbar {
+    height: 64px;
+    min-height: 64px;
+    overflow: visible;
+  }
+
+  .toolbarControls {
+    display: grid;
+    grid-template-columns: 238px 196px 42px 42px;
+    align-items: end;
+    gap: 12px;
+    margin-right: 28px;
+  }
+
+  .toolbarControls .viewSwitch { grid-column: 1; }
+  .toolbarControls .toolbarStatus { grid-column: 2; }
+  .toolbarControls > button[title="Refresh"] { grid-column: 3; }
+  .toolbarControls .themeToggle { grid-column: 4; margin: 0; }
 }
