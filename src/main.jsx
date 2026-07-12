@@ -137,8 +137,8 @@ function App() {
             <div className="liveMapStack">
               <WorldMap attacks={filteredAttacks} initialLoading={loading && !data} onExpand={() => { setSelectedMapGroup(null); setMapExpanded(true); }} />
               <ActivityTrend attacks={filteredAttacks} onSelectBucket={(bucket) => setEventDrilldown({ title: `Attack activity · ${bucket.label}`, subtitle: `${bucket.count} attempts in this time segment`, attacks: bucket.attacks })} />
+              <AgeLegend />
             </div>
-            <AgeLegend />
             <EventTable attacks={filteredAttacks} activeBans={data?.activeBans || []} selectedEvent={selectedEvent} onSelectEvent={setSelectedEvent} />
             {selectedEvent && <EventDetailDrawer event={selectedEvent} activeBans={data?.activeBans || []} onClose={() => setSelectedEvent(null)} onInvestigate={(ip) => { setSelectedEvent(null); setSelectedIp(ip); }} />}
             {eventDrilldown && <EventCollectionDrawer detail={eventDrilldown} activeBans={data?.activeBans || []} onClose={() => setEventDrilldown(null)} onInvestigate={(ip) => { setEventDrilldown(null); setSelectedIp(ip); }} />}
