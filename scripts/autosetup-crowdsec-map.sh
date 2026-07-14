@@ -163,7 +163,7 @@ set_env() {
 }
 
 registered() {
-  cscli_run "$1" list -o json 2>/dev/null | grep -Fq "\"crowdsec-map\""
+  cscli_run "$1" list -o json 2>/dev/null | grep -Eq '"(machineId|name)"[[:space:]]*:[[:space:]]*"crowdsec-map"'
 }
 
 configure_machine() {
@@ -176,7 +176,8 @@ configure_machine() {
     [[ "$ROTATE" == true ]] || fail "Machine crowdsec-map exists but its password is unavailable. Restore .env or use --rotate."
     cscli_run machines delete crowdsec-map >/dev/null
   fi
-  credentials="$(cscli_run machines add crowdsec-map --auto --file -)"
+  # cscli writes the generated login/password to stderr in recent releases.
+  credentials="$(cscli_run machines add crowdsec-map --auto --file - 2>&1)"
   login="$(printf '%s\n' "$credentials" | awk -F: '$1 ~ /^[[:space:]]*login$/ {sub(/^[^:]*:[[:space:]]*/, ""); print; exit}')"
   password="$(printf '%s\n' "$credentials" | awk -F: '$1 ~ /^[[:space:]]*password$/ {sub(/^[^:]*:[[:space:]]*/, ""); print; exit}')"
   [[ -n "$login" && -n "$password" ]] || fail "Created machine credentials could not be parsed."
