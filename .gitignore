@@ -7,3 +7,5 @@ data/
 qa-*.png
 .env
 docker-compose.autosetup.yml
+/docs/Roadmap.docx
+/docs/Roadmap offen.docx
