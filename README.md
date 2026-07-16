@@ -6,6 +6,23 @@
 
 CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decisions on a live world map. It shows attack origins, active bans, countries, source IPs, scenarios, and a compact timeline for recent activity.
 
+> See where your CrowdSec detections come from, spot patterns at a glance, and investigate a suspicious IP without leaving your dashboard.
+
+![CrowdSec Map dashboard](.github/social-preview.png)
+
+## Run it in minutes
+
+Use the published image with Docker Compose:
+
+```bash
+curl -O https://raw.githubusercontent.com/paddy73-ch/crowdsec-map/main/docker-compose.image.yml
+docker compose -f docker-compose.image.yml up -d
+```
+
+Then open `http://localhost:8088`. Configure LAPI credentials or the `cscli` fallback as described below to display your own CrowdSec data.
+
+**Made for self-hosted CrowdSec deployments:** Docker, Proxmox/LXC, Unraid, and Home Assistant dashboards.
+
 > [!IMPORTANT]
 > **Unofficial community project:** CrowdSec Map is an independent project and is not an official CrowdSec product, service, or solution. It is not developed, maintained, endorsed, or supported by CrowdSec. CrowdSec and related names or marks belong to their respective owners.
 
