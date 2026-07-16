@@ -31,5 +31,19 @@ const snapshot = alerts.map((alert, index) => {
   };
 });
 
-await writeFile(outputFile, `${JSON.stringify({ generatedAt: new Date().toISOString(), alerts: snapshot }, null, 2)}\n`);
-console.log(`Created ${outputFile} with ${snapshot.length} ${keepSourceIps ? "source-preserving" : "anonymized"} alerts.`);
+const decisions = snapshot
+  .filter((_alert, index) => index % 5 === 0)
+  .map((alert, index) => ({
+    id: `demo-decision-${index + 1}`,
+    ip: alert.source.ip,
+    value: alert.source.ip,
+    scope: "Ip",
+    country: alert.source.cn,
+    scenario: alert.scenario,
+    origin: "demo-snapshot",
+    duration: "4h",
+    until: new Date(new Date(alert.created_at).getTime() + 4 * 60 * 60 * 1000).toISOString()
+  }));
+
+await writeFile(outputFile, `${JSON.stringify({ generatedAt: new Date().toISOString(), alerts: snapshot, decisions }, null, 2)}\n`);
+console.log(`Created ${outputFile} with ${snapshot.length} ${keepSourceIps ? "source-preserving" : "anonymized"} alerts and ${decisions.length} demo decisions.`);

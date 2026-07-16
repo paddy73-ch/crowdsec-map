@@ -8,7 +8,7 @@ import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHis
 import { readInvestigationLogLines, readIpInvestigation } from "./investigation.js";
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
-import { readActiveBans, readCrowdSecData, readCscliIpDetails, readLapiDecisionOverview } from "./sources.js";
+import { readActiveBans, readCrowdSecData, readCscliIpDetails, readDemoDecisionOverview, readLapiDecisionOverview } from "./sources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -70,7 +70,13 @@ app.get("/api/history", async (request, response) => {
 
 app.get("/api/decisions", async (request, response) => {
   if (config.demoMode) {
-    response.json({ items: [], total: 0, source: "demo-snapshot" });
+    response.json(await readDemoDecisionOverview({
+      search: request.query.search,
+      sort: request.query.sort,
+      direction: request.query.direction,
+      offset: request.query.offset,
+      limit: request.query.limit
+    }));
     return;
   }
   try {

@@ -605,22 +605,22 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
           >
             <MapIcon size={15} /> Live
           </button>
-          {!data?.demoMode && <button
+          <button
             type="button"
             className={view === "history" ? "active" : ""}
             onClick={() => setView("history")}
             title="History analysis"
           >
             <BarChart3 size={15} /> History
-          </button>}
-          {!data?.demoMode && <button
+          </button>
+          <button
             type="button"
             className={view === "decisions" ? "active" : ""}
             onClick={() => setView("decisions")}
             title="Block decisions"
           >
             <ShieldAlert size={15} /> Decisions
-          </button>}
+          </button>
         </div>
         {view !== "decisions" && <div className="toolbarStatus">
           {!data?.demoMode && <>

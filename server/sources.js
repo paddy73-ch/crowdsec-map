@@ -52,10 +52,19 @@ export async function readCrowdSecData(requestedSource = config.dataSource) {
 }
 
 async function readDemoSnapshot() {
-  const snapshot = JSON.parse(await readFile(config.demoSnapshotFile, "utf8"));
+  const snapshot = await readDemoSnapshotFile();
   const normalized = normalizeCrowdSecPayload(snapshot, "demo-snapshot");
   normalized.generatedAt = snapshot.generatedAt || normalized.generatedAt;
   return normalized;
+}
+
+export async function readDemoDecisionOverview(options = {}) {
+  const snapshot = await readDemoSnapshotFile();
+  return buildDecisionOverview(snapshot.decisions || [], options, snapshot.generatedAt || new Date().toISOString());
+}
+
+async function readDemoSnapshotFile() {
+  return JSON.parse(await readFile(config.demoSnapshotFile, "utf8"));
 }
 
 export async function readActiveBans() {
@@ -128,13 +137,17 @@ export async function readLapiDecisionOverview(options = {}) {
     };
   }
 
+  return buildDecisionOverview(decisionCache.items, options, decisionCache.cachedAt);
+}
+
+function buildDecisionOverview(decisions, options, cachedAt) {
   const query = String(options.search || "").trim();
   const limit = clampNumber(options.limit, 50, 1, 200);
   const offset = clampNumber(options.offset, 0, 0, Number.MAX_SAFE_INTEGER);
   const predicates = buildDecisionPredicates(query);
   const filtered = predicates.length
-    ? decisionCache.items.filter((item) => predicates.every((predicate) => predicate(item)))
-    : decisionCache.items;
+    ? decisions.filter((item) => predicates.every((predicate) => predicate(item)))
+    : decisions;
   const sort = Object.hasOwn(DECISION_FIELDS, options.sort) ? options.sort : "";
   const direction = options.direction === "desc" ? "desc" : "asc";
   const sorted = sort ? sortDecisions(filtered, sort, direction) : filtered;
@@ -142,9 +155,9 @@ export async function readLapiDecisionOverview(options = {}) {
 
   return {
     generatedAt: new Date().toISOString(),
-    cachedAt: decisionCache.cachedAt,
+    cachedAt,
     cacheSeconds: 60,
-    total: decisionCache.items.length,
+    total: decisions.length,
     matched: filtered.length,
     countries: new Set(filtered.map((item) => item.country).filter(Boolean)).size,
     scenarios: new Set(filtered.map((item) => item.scenario).filter(Boolean)).size,
