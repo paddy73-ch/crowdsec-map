@@ -8,7 +8,7 @@ CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decis
 
 ## Public demo
 
-Try the [public CrowdSec Map demo](https://crowdsec-map-demo.patking73.ch). It uses a static snapshot of real CrowdSec alerts; it has no connection to a live CrowdSec deployment and does not expose a target IP.
+Try the [public CrowdSec Map demo](https://crowdsec-map-demo.paddy73.ch). It uses a static snapshot of real CrowdSec alerts; it has no connection to a live CrowdSec deployment and does not expose a target IP.
 
 ## Video demos
 
