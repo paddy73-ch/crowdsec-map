@@ -5,10 +5,11 @@ import { readFile, writeFile } from "node:fs/promises";
 
 const [inputFile, outputFile, ...args] = process.argv.slice(2);
 if (!inputFile || !outputFile) {
-  throw new Error("Usage: node scripts/create-demo-snapshot.mjs <alerts.json> <demo-snapshot.json> [--window-hours=36]");
+  throw new Error("Usage: node scripts/create-demo-snapshot.mjs <alerts.json> <demo-snapshot.json> [--window-hours=36] [--keep-source-ips]");
 }
 
 const windowHours = Number(args.find((arg) => arg.startsWith("--window-hours="))?.split("=")[1] || 36);
+const keepSourceIps = args.includes("--keep-source-ips");
 const input = JSON.parse(await readFile(inputFile, "utf8"));
 const alerts = Array.isArray(input) ? input : input.items || input.alerts || [];
 const now = Date.now();
@@ -22,7 +23,7 @@ const snapshot = alerts.map((alert, index) => {
     scenario: alert.scenario || alert.scenario_hash || "unknown",
     events_count: Number(alert.events_count || alert.events?.length || alert.count || 1),
     source: {
-      ip: `198.18.${seed[4]}.${seed[5]}`,
+      ip: keepSourceIps ? (source.ip || alert.ip || "") : `198.18.${seed[4]}.${seed[5]}`,
       cn: source.cn || source.country || source.country_code || "",
       latitude: source.latitude ?? source.lat,
       longitude: source.longitude ?? source.lon ?? source.lng
@@ -31,4 +32,4 @@ const snapshot = alerts.map((alert, index) => {
 });
 
 await writeFile(outputFile, `${JSON.stringify({ generatedAt: new Date().toISOString(), alerts: snapshot }, null, 2)}\n`);
-console.log(`Created ${outputFile} with ${snapshot.length} anonymized alerts.`);
+console.log(`Created ${outputFile} with ${snapshot.length} ${keepSourceIps ? "source-preserving" : "anonymized"} alerts.`);
