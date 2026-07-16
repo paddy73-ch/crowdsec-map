@@ -1,4 +1,3 @@
-
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Donate-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/paddy73.ch)
 
 # CrowdSec Map
@@ -6,6 +5,13 @@
 CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decisions on a live world map. It shows attack origins, active bans, countries, source IPs, scenarios, and a compact timeline for recent activity.
 
 > See where your CrowdSec detections come from, spot patterns at a glance, and investigate a suspicious IP without leaving your dashboard.
+
+## Video demos
+
+These recordings use live CrowdSec alert data. The protected target IP is masked.
+
+- [60-second demo with German voice-over](docs/demo-assets/crowdsec-map-live-demo-de.mp4)
+- [60-second demo with English voice-over](docs/demo-assets/crowdsec-map-live-demo-en.mp4)
 
 ![CrowdSec Map dashboard](docs/images/crowdsec-map-dashboard.png)
 
