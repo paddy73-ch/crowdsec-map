@@ -1,0 +1,18 @@
+services:
+  crowdsec-map-demo:
+    build: .
+    container_name: crowdsec-map-demo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8088"
+    environment:
+      PORT: "8088"
+      DATA_SOURCE: "demo-snapshot"
+      DEMO_MODE: "true"
+      DEMO_SNAPSHOT_FILE: "/app/data/demo-snapshot.json"
+      PUBLIC_TARGET_IP_AUTO: "false"
+      PUBLIC_TARGET_IP: ""
+      ACCESS_LOG_ENABLED: "false"
+      INVESTIGATION_LOG_PATHS: ""
+    volumes:
+      - ./data/demo-snapshot.json:/app/data/demo-snapshot.json:ro

@@ -32,10 +32,12 @@ app.get("/api/attacks", async (request, response) => {
   let activeBans = [];
   let activeBansWarning = "";
 
-  try {
-    activeBans = await readActiveBans();
-  } catch (error) {
-    activeBansWarning = `active-bans: ${error.message}`;
+  if (!config.demoMode) {
+    try {
+      activeBans = await readActiveBans();
+    } catch (error) {
+      activeBansWarning = `active-bans: ${error.message}`;
+    }
   }
 
   if (data.source !== "lapi-decisions") {
@@ -48,6 +50,7 @@ app.get("/api/attacks", async (request, response) => {
     refreshSeconds: config.refreshSeconds,
     publicTargetIp: publicTargetIp.ip,
     publicTargetIpSource: publicTargetIp.source,
+    demoMode: config.demoMode,
     warning: [data.warning, activeBansWarning, publicTargetIp.warning && `public-ip: ${publicTargetIp.warning}`].filter(Boolean).join(" | "),
     totals: {
       ...data.totals,
@@ -66,6 +69,10 @@ app.get("/api/history", async (request, response) => {
 });
 
 app.get("/api/decisions", async (request, response) => {
+  if (config.demoMode) {
+    response.json({ items: [], total: 0, source: "demo-snapshot" });
+    return;
+  }
   try {
     response.json(await readLapiDecisionOverview({
       search: request.query.search,

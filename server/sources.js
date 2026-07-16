@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { config } from "./config.js";
 import { normalizeCrowdSecPayload } from "./normalize.js";
@@ -37,6 +38,9 @@ export async function readCrowdSecData(requestedSource = config.dataSource) {
       if (candidate === "sample") {
         return normalizeCrowdSecPayload(sampleAlerts, "sample");
       }
+      if (candidate === "demo-snapshot") {
+        return await readDemoSnapshot();
+      }
     } catch (error) {
       errors.push(`${candidate}: ${error.message}`);
     }
@@ -45,6 +49,13 @@ export async function readCrowdSecData(requestedSource = config.dataSource) {
   const fallback = normalizeCrowdSecPayload(sampleAlerts, "sample");
   fallback.warning = errors.join(" | ") || "No data source returned data";
   return fallback;
+}
+
+async function readDemoSnapshot() {
+  const snapshot = JSON.parse(await readFile(config.demoSnapshotFile, "utf8"));
+  const normalized = normalizeCrowdSecPayload(snapshot, "demo-snapshot");
+  normalized.generatedAt = snapshot.generatedAt || normalized.generatedAt;
+  return normalized;
 }
 
 export async function readActiveBans() {

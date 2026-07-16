@@ -590,10 +590,10 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
     <header className={`toolbar ${view === "live" ? "toolbarLive" : "toolbarHistory"}`}>
       <div>
         <div className="titleLine">
-          <h2>{view === "live" ? "Live attacks" : view === "history" ? "History" : "Block decisions"}</h2>
+          <h2>{view === "live" ? (data?.demoMode ? "Demo snapshot" : "Live attacks") : view === "history" ? "History" : "Block decisions"}</h2>
           {data?.publicTargetIp && <span title={`Public target IP: ${data.publicTargetIpSource || "unknown"}`}>{data.publicTargetIp}</span>}
         </div>
-        <p>{view === "live" ? `Last update ${formatTime(data?.generatedAt)}` : view === "history" ? `Repeated sources ${formatTime(data?.generatedAt)}` : "Enforcement data · not detected attacks"}</p>
+        <p>{view === "live" ? `${data?.demoMode ? "Sanitized snapshot updated" : "Last update"} ${formatTime(data?.generatedAt)}` : view === "history" ? `Repeated sources ${formatTime(data?.generatedAt)}` : "Enforcement data · not detected attacks"}</p>
       </div>
       <div className="toolbarControls">
         <div className="viewSwitch" role="group" aria-label="Dashboard view">
@@ -605,24 +605,25 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
           >
             <MapIcon size={15} /> Live
           </button>
-          <button
+          {!data?.demoMode && <button
             type="button"
             className={view === "history" ? "active" : ""}
             onClick={() => setView("history")}
             title="History analysis"
           >
             <BarChart3 size={15} /> History
-          </button>
-          <button
+          </button>}
+          {!data?.demoMode && <button
             type="button"
             className={view === "decisions" ? "active" : ""}
             onClick={() => setView("decisions")}
             title="Block decisions"
           >
             <ShieldAlert size={15} /> Decisions
-          </button>
+          </button>}
         </div>
         {view !== "decisions" && <div className="toolbarStatus">
+          {!data?.demoMode && <>
           <div className="toolbarMenuWrap">
             <span>Source</span>
             <button
@@ -657,6 +658,7 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
               </div>
             )}
           </div>
+          </>}
           <div className="toolbarMenuWrap">
             <span>Intervall</span>
             <button

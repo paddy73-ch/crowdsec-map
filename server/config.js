@@ -1,6 +1,8 @@
 export const config = {
   port: Number(process.env.PORT || 8088),
   dataSource: process.env.DATA_SOURCE || "auto",
+  demoMode: parseBoolean(process.env.DEMO_MODE, false),
+  demoSnapshotFile: process.env.DEMO_SNAPSHOT_FILE || "data/demo-snapshot.json",
   refreshSeconds: Number(process.env.REFRESH_SECONDS || 30),
   cscliCommand: process.env.CSCLI_COMMAND || "cscli alerts list -o json --limit 0",
   crowdsecContainer: process.env.CROWDSEC_CONTAINER || "",
