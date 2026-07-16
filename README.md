@@ -8,7 +8,7 @@ CrowdSec Map is a small Docker web app that visualizes CrowdSec alerts and decis
 
 > See where your CrowdSec detections come from, spot patterns at a glance, and investigate a suspicious IP without leaving your dashboard.
 
-![CrowdSec Map dashboard](.github/social-preview.png)
+![CrowdSec Map dashboard](docs/images/crowdsec-map-dashboard.png)
 
 ## Run it in minutes
 
