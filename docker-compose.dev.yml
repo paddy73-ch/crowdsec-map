@@ -1,0 +1,12 @@
+services:
+  crowdsec-map:
+    # Keep the development instance independent from the production container.
+    container_name: crowdsec-map-dev
+    ports:
+      - "8089:8088"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - crowdsec-map-dev-data:/app/data
+
+volumes:
+  crowdsec-map-dev-data:
