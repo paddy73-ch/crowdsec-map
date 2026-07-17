@@ -48,6 +48,26 @@ Open the dashboard:
 http://192.168.192.101:8088
 ```
 
+### Deployment ports
+
+The three deployments on `.101` use separate host ports:
+
+| Environment | Branch | URL |
+| --- | --- | --- |
+| Production | `main` | `http://192.168.192.101:8088` |
+| Development | `dev` | `http://192.168.192.101:8089` |
+| Demo | — | `http://192.168.192.101:8090` |
+
+Start the development deployment from the `dev` branch. It uses a separate
+container and persistent data volume, so it can run beside production:
+
+```bash
+docker compose -p crowdsec-map-dev -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+When the work is approved, merge `dev` into `main` and deploy `main` normally
+on port `8088`.
+
 ## Data Sources
 
 The Live map uses `LAPI alerts` as its primary source. In `Auto` mode it falls back to `cscli` and finally to `Sample` if LAPI is unavailable. Enforcement decisions are intentionally separated into the paginated `Decisions` view because blocklists are not detected attacks.
