@@ -22,6 +22,19 @@ export async function getLapiApiKey() {
   return (await readStoredCredentials()).apiKey || "";
 }
 
+export async function getLapiCredentialsStatus() {
+  const stored = await readStoredCredentials();
+  const hasEnvironmentWatcher = Boolean(config.lapiLogin && config.lapiPassword);
+  const hasEnvironmentApiKey = Boolean(config.lapiApiKey);
+  return {
+    file: config.lapiCredentialsFile,
+    watcherConfigured: hasEnvironmentWatcher || Boolean(stored.login && stored.password),
+    decisionsConfigured: hasEnvironmentApiKey || Boolean(stored.apiKey),
+    managed: Boolean(stored.login || stored.password || stored.apiKey),
+    autoSetupEnabled: config.lapiAutoSetup
+  };
+}
+
 export async function autoConfigureLapiCredentials() {
   if (!config.lapiAutoSetup) {
     return { configured: false, reason: "disabled" };

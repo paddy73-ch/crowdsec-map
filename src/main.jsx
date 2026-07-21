@@ -729,16 +729,23 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
 
 function HiddenMenuModal({ onClose }) {
   const [summary, setSummary] = useState(null);
+  const [lapiStatus, setLapiStatus] = useState(null);
+  const [pathCopied, setPathCopied] = useState(false);
   const [error, setError] = useState("");
 
   const loadSummary = useCallback(async () => {
     setError("");
     try {
-      const response = await fetch("/api/access-log/summary?days=7");
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      const [summaryResponse, lapiResponse] = await Promise.all([
+        fetch("/api/access-log/summary?days=7"),
+        fetch("/api/lapi/credentials/status")
+      ]);
+      if (!summaryResponse.ok || !lapiResponse.ok) {
+        throw new Error(`HTTP ${!summaryResponse.ok ? summaryResponse.status : lapiResponse.status}`);
       }
-      setSummary(await response.json());
+      const [summaryPayload, lapiPayload] = await Promise.all([summaryResponse.json(), lapiResponse.json()]);
+      setSummary(summaryPayload);
+      setLapiStatus(lapiPayload);
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -757,6 +764,16 @@ function HiddenMenuModal({ onClose }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  const copyCredentialsPath = async () => {
+    try {
+      await navigator.clipboard.writeText(lapiStatus?.file || "");
+      setPathCopied(true);
+      window.setTimeout(() => setPathCopied(false), 1400);
+    } catch {
+      setPathCopied(false);
+    }
+  };
 
   return (
     <div className="modalBackdrop" role="presentation" onClick={onClose}>
@@ -794,6 +811,15 @@ function HiddenMenuModal({ onClose }) {
               ))}
               {(summary.recent || []).length === 0 && <p>No visits logged yet.</p>}
             </div>
+            {lapiStatus && <div className="hiddenRecent lapiCredentials">
+              <h4>LAPI credentials</h4>
+              <p>{lapiStatus.watcherConfigured ? "Watcher credentials configured" : "Watcher credentials not configured"} · {lapiStatus.decisionsConfigured ? "Decisions key configured" : "No Decisions key"}</p>
+              <div className="lapiCredentialsPath">
+                <code title={lapiStatus.file}>{lapiStatus.file}</code>
+                <button type="button" onClick={copyCredentialsPath} title="Copy container path"><Copy size={14} /> {pathCopied ? "Copied" : "Copy path"}</button>
+              </div>
+              {lapiStatus.autoSetupEnabled && <p>Automatic setup runs on container start.</p>}
+            </div>}
           </div>
         )}
       </section>

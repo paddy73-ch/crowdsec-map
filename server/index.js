@@ -6,7 +6,7 @@ import { config } from "./config.js";
 import { readIpReputation, readReputationStats } from "./cti.js";
 import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
 import { readInvestigationLogLines, readIpInvestigation } from "./investigation.js";
-import { autoConfigureLapiCredentials } from "./lapiCredentials.js";
+import { autoConfigureLapiCredentials, getLapiCredentialsStatus } from "./lapiCredentials.js";
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails, readDemoDecisionOverview, readLapiDecisionOverview } from "./sources.js";
@@ -137,6 +137,14 @@ app.get("/api/history/ip/:ip", async (request, response) => {
 app.get("/api/reputation/stats", async (_request, response) => {
   try {
     response.json(await readReputationStats());
+  } catch (error) {
+    response.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/lapi/credentials/status", async (_request, response) => {
+  try {
+    response.json(await getLapiCredentialsStatus());
   } catch (error) {
     response.status(500).json({ error: error.message });
   }

@@ -2029,6 +2029,33 @@ p {
   color: #e8f3f1;
 }
 
+.lapiCredentials {
+  display: grid;
+  gap: 10px;
+}
+
+.lapiCredentialsPath {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lapiCredentialsPath code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c8ddd9;
+}
+
+.lapiCredentialsPath button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+
 .hiddenRecentRow time,
 .hiddenRecentRow span,
 .hiddenRecentRow em {
