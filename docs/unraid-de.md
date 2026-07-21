@@ -28,6 +28,9 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `CTI_API_KEY`: optionaler CrowdSec-CTI-API-Schlüssel für bedarfsgesteuerte IP-Reputationsabfragen.
 - `CTI_CACHE_FILE`: `/app/data/cti-cache.json`
 - `CTI_CACHE_HOURS`: `72`
+- `LAPI_AUTO_SETUP`: auf `true` setzen, um beim nächsten Start die LAPI-Watcher-Zugangsdaten über `cscli` zu erstellen und im Appdata-Verzeichnis zu speichern. Dazu `DATA_SOURCE` auf `lapi-alerts` stellen und eine erreichbare `LAPI_URL` konfigurieren.
+- `LAPI_AUTO_SETUP_DECISIONS`: erstellt zusätzlich einen persistenten Bouncer-Key für Entscheidungen; Standard: `false`.
+- `LAPI_CREDENTIALS_FILE`: `/app/data/lapi-credentials.json`, Berechtigungen `600`.
 - `ACCESS_LOG_ENABLED`: optionales Protokollieren von Demo-Besuchen; Standard: `false`.
 - `ACCESS_LOG_FILE`: `/app/data/access-log.jsonl`
 - `ACCESS_LOG_RETENTION_DAYS`: `30`
@@ -39,6 +42,15 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - Der LAPI-Modus kommt ohne Docker-Socket-Zugriff aus und wird empfohlen, wenn Watcher- oder Bouncer-Zugangsdaten vorhanden sind.
 
 Für die IP-Untersuchung liest CrowdSec Map Datei-Akquisitionen automatisch aus `acquis.yaml` und `acquis.d`, wenn `CROWDSEC_CONTAINER` und der Docker-Socket konfiguriert sind. Die Logdateien werden dabei direkt aus dem CrowdSec-Container gelesen; eine zusätzliche Log-Einbindung ist nicht nötig. Für weitere Logs, die CrowdSec nicht erfasst, können Host-Logverzeichnisse oder -dateien schreibgeschützt eingebunden und die im Container sichtbaren Pfade in `INVESTIGATION_LOG_PATHS` eingetragen werden.
+
+## Automatische LAPI-Einrichtung
+
+1. CrowdSec Map und CrowdSec in dasselbe eigene Docker-Netzwerk legen, damit CrowdSec Map den Namen des CrowdSec-Containers auflösen kann.
+2. `LAPI_URL` auf `http://<Name-des-CrowdSec-Containers>:8080`, `DATA_SOURCE` auf `lapi-alerts` und `LAPI_AUTO_SETUP` auf `true` setzen.
+3. Die Vorlage anwenden und CrowdSec Map neu starten. Die App erstellt eine Watcher-Maschine `crowdsec-map` und speichert die Zugangsdaten mit Berechtigung `600` im Appdata-Verzeichnis.
+4. Im Container-Log die Meldung `LAPI automatic setup completed` prüfen und danach `LAPI_AUTO_SETUP` wieder auf `false` setzen.
+
+Wenn die Decisions-Ansicht ebenfalls LAPI statt `cscli` verwenden soll, zusätzlich `LAPI_AUTO_SETUP_DECISIONS` auf `true` setzen.
 
 ## Quellmodi
 

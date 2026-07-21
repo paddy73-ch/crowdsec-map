@@ -156,6 +156,8 @@ It automatically detects a Docker-based or native Linux CrowdSec installation, t
 | `LAPI_URL` | CrowdSec LAPI URL |
 | `LAPI_LOGIN` / `LAPI_PASSWORD` | Watcher/machine credentials for alerts |
 | `LAPI_API_KEY` | Bouncer key for decisions |
+| `LAPI_AUTO_SETUP` | Create and persist LAPI watcher credentials with `cscli` on startup, default `false` |
+| `LAPI_AUTO_SETUP_DECISIONS` | Also create and persist a Decisions bouncer key, default `false` |
 | `PUBLIC_TARGET_IP` | Optional manual public target IP shown in the dashboard header |
 | `PUBLIC_TARGET_IP_AUTO` | Auto-detect public target IP when `PUBLIC_TARGET_IP` is empty, default `true` |
 | `PUBLIC_TARGET_IP_REFRESH_MINUTES` | Public IP auto-detect refresh interval, default `60` |

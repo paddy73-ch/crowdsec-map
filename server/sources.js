@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { config } from "./config.js";
+import { getLapiApiKey, getLapiCredentials } from "./lapiCredentials.js";
 import { normalizeCrowdSecPayload } from "./normalize.js";
 import { sampleAlerts } from "./sampleData.js";
 
@@ -255,7 +256,8 @@ function decisionQueryError(message) {
 }
 
 async function fetchLapiDecisions(limit) {
-  if (!config.lapiApiKey) {
+  const apiKey = await getLapiApiKey();
+  if (!apiKey) {
     throw new Error("LAPI_API_KEY is missing");
   }
 
@@ -268,7 +270,7 @@ async function fetchLapiDecisions(limit) {
   const response = await fetch(url, {
     headers: {
       ...lapiHeaders,
-      "X-Api-Key": config.lapiApiKey
+      "X-Api-Key": apiKey
     }
   });
 
@@ -438,8 +440,9 @@ async function getWatcherToken() {
     return tokenCache.token;
   }
 
-  if (!config.lapiLogin || !config.lapiPassword) {
-    throw new Error("LAPI_LOGIN and LAPI_PASSWORD are missing");
+  const credentials = await getLapiCredentials();
+  if (!credentials.login || !credentials.password) {
+    throw new Error("LAPI watcher credentials are missing");
   }
 
   const response = await fetch(`${config.lapiUrl}/v1/watchers/login`, {
@@ -449,8 +452,8 @@ async function getWatcherToken() {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      machine_id: config.lapiLogin,
-      password: config.lapiPassword
+      machine_id: credentials.login,
+      password: credentials.password
     })
   });
 

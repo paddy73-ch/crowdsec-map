@@ -6,6 +6,7 @@ import { config } from "./config.js";
 import { readIpReputation, readReputationStats } from "./cti.js";
 import { isIpAddress, readGroupIps, readHistorySummary, readIpHistory, recordHistory } from "./history.js";
 import { readInvestigationLogLines, readIpInvestigation } from "./investigation.js";
+import { autoConfigureLapiCredentials } from "./lapiCredentials.js";
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails, readDemoDecisionOverview, readLapiDecisionOverview } from "./sources.js";
@@ -204,4 +205,7 @@ app.get("*", (_request, response) => {
 
 app.listen(config.port, () => {
   console.log(`CrowdSec Map listening on ${config.port}`);
+  autoConfigureLapiCredentials()
+    .then((result) => result.configured && console.log(`LAPI automatic setup completed (alerts: ${result.alerts}, decisions: ${result.decisions})`))
+    .catch((error) => console.error(`LAPI automatic setup failed: ${error.message}`));
 });

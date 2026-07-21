@@ -28,6 +28,9 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `CTI_API_KEY`: optional CrowdSec CTI API key for on-demand IP reputation checks.
 - `CTI_CACHE_FILE`: `/app/data/cti-cache.json`
 - `CTI_CACHE_HOURS`: `72`
+- `LAPI_AUTO_SETUP`: set to `true` to create the LAPI watcher credentials through `cscli` on the next start and save them in Appdata. Set `DATA_SOURCE` to `lapi-alerts` and configure a reachable `LAPI_URL`.
+- `LAPI_AUTO_SETUP_DECISIONS`: additionally create a persistent Decisions bouncer key, default `false`.
+- `LAPI_CREDENTIALS_FILE`: `/app/data/lapi-credentials.json`, mode `600`.
 - `ACCESS_LOG_ENABLED`: optional demo visit logging, default `false`.
 - `ACCESS_LOG_FILE`: `/app/data/access-log.jsonl`
 - `ACCESS_LOG_RETENTION_DAYS`: `30`
@@ -39,6 +42,15 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - LAPI mode avoids Docker socket access and is preferred when you have watcher or bouncer credentials.
 
 For Investigation, CrowdSec Map automatically reads file acquisitions from `acquis.yaml` and `acquis.d` when `CROWDSEC_CONTAINER` and the Docker socket are configured. It reads those files from the CrowdSec container directly, so no additional log mount is needed. For extra logs that CrowdSec does not acquire, mount the relevant host log directories or files read-only and point `INVESTIGATION_LOG_PATHS` to the paths visible inside the container.
+
+## Automatic LAPI setup
+
+1. Put CrowdSec Map and CrowdSec in the same custom Docker network, so that the CrowdSec container name resolves from CrowdSec Map.
+2. Set `LAPI_URL` to `http://<CrowdSec-container-name>:8080`, `DATA_SOURCE` to `lapi-alerts`, and `LAPI_AUTO_SETUP` to `true`.
+3. Apply the template and restart CrowdSec Map. It creates a `crowdsec-map` watcher machine and saves its credentials in Appdata with mode `600`.
+4. Confirm `LAPI automatic setup completed` in the CrowdSec Map container log, then set `LAPI_AUTO_SETUP` back to `false`.
+
+Set `LAPI_AUTO_SETUP_DECISIONS` to `true` as well if the Decisions view should use LAPI instead of `cscli`.
 
 ## Source modes
 
