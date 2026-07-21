@@ -170,6 +170,7 @@ It automatically detects a Docker-based or native Linux CrowdSec installation, t
 | `ACCESS_LOG_FILE` | Persistent demo visit log file, default `data/access-log.jsonl` |
 | `ACCESS_LOG_RETENTION_DAYS` | Demo visit log retention, default `30` |
 | `INVESTIGATION_LOG_PATHS` | Comma, semicolon, or newline separated log paths/globs for IP investigation |
+| `INVESTIGATION_AUTO_DETECT` | Read file acquisitions from `CROWDSEC_CONTAINER` through the Docker socket, default `true` |
 | `INVESTIGATION_MAX_LINES` | Default sample lines kept per investigation log source, default `50`, UI limit `1-200` |
 | `INVESTIGATION_TIMEOUT_MS` | Maximum server-side investigation scan time, default `8000` |
 
@@ -179,7 +180,7 @@ CrowdSec Map stores its recorded alert history in SQLite. On the first v0.2.0 st
 
 ## IP Investigation
 
-The IP detail overlay includes an on-demand Investigation block. It scans configured, read-only mounted host logs for the selected IP and selected History window. This is designed as the web-app version of the original `csfind` workflow: compare CrowdSec context with reverse proxy, MFA, Proxmox, or other access logs.
+The IP detail overlay includes an on-demand Investigation block. When `CROWDSEC_CONTAINER` and the Docker socket are configured, it discovers file acquisitions from CrowdSec's `acquis.yaml`/`acquis.d` and scans them directly. It also scans configured, read-only mounted host logs for the selected IP and selected History window. This is designed as the web-app version of the original `csfind` workflow: compare CrowdSec context with reverse proxy, MFA, Proxmox, or other access logs.
 
 Default investigation paths are:
 

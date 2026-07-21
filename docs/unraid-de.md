@@ -32,12 +32,13 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 - `ACCESS_LOG_FILE`: `/app/data/access-log.jsonl`
 - `ACCESS_LOG_RETENTION_DAYS`: `30`
 - `INVESTIGATION_LOG_PATHS`: optionale Logpfade oder Platzhalter-Ausdrücke für das Panel zur IP-Untersuchung.
+- `INVESTIGATION_AUTO_DETECT`: liest Datei-Akquisitionen automatisch aus dem konfigurierten CrowdSec-Container; Standard: `true`. Erfordert `CROWDSEC_CONTAINER` und die Einbindung des Docker-Sockets.
 - `INVESTIGATION_MAX_LINES`: Standardanzahl der pro Logquelle gelesenen Zeilen; Standard: `50`, UI-Limit: `1–200`.
 - `INVESTIGATION_TIMEOUT_MS`: maximale Dauer eines Scans; Standard: `8000`.
 - Die Einbindung des Docker-Sockets ist optional, aber erforderlich, wenn `cscli` über `CROWDSEC_CONTAINER` verwendet wird.
 - Der LAPI-Modus kommt ohne Docker-Socket-Zugriff aus und wird empfohlen, wenn Watcher- oder Bouncer-Zugangsdaten vorhanden sind.
 
-Für die IP-Untersuchung müssen die relevanten Host-Logverzeichnisse oder -dateien schreibgeschützt eingebunden und in `INVESTIGATION_LOG_PATHS` die im Container sichtbaren Pfade angegeben werden.
+Für die IP-Untersuchung liest CrowdSec Map Datei-Akquisitionen automatisch aus `acquis.yaml` und `acquis.d`, wenn `CROWDSEC_CONTAINER` und der Docker-Socket konfiguriert sind. Die Logdateien werden dabei direkt aus dem CrowdSec-Container gelesen; eine zusätzliche Log-Einbindung ist nicht nötig. Für weitere Logs, die CrowdSec nicht erfasst, können Host-Logverzeichnisse oder -dateien schreibgeschützt eingebunden und die im Container sichtbaren Pfade in `INVESTIGATION_LOG_PATHS` eingetragen werden.
 
 ## Quellmodi
 

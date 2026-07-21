@@ -30,6 +30,7 @@ export const config = {
     "/opt/security-stack/authelia/config/authelia.log",
     "/var/log/pveproxy/access.log"
   ].join(",")),
+  investigationAutoDetect: parseBoolean(process.env.INVESTIGATION_AUTO_DETECT, true),
   investigationMaxLines: Number(process.env.INVESTIGATION_MAX_LINES || 50),
   investigationTimeoutMs: Number(process.env.INVESTIGATION_TIMEOUT_MS || 8000),
   staticDir: process.env.STATIC_DIR || "dist"

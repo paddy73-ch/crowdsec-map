@@ -1,7 +1,9 @@
 import { createReadStream } from "node:fs";
 import { access, readdir, stat } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import path from "node:path";
 import readline from "node:readline";
+import { promisify } from "node:util";
 import { config } from "./config.js";
 import { isIpAddress } from "./history.js";
 import { readActiveBansForIp } from "./sources.js";
@@ -10,6 +12,10 @@ const MAX_INVESTIGATION_DAYS = 180;
 const MAX_LINE_LENGTH = 700;
 const MAX_SAMPLE_LINES = 200;
 const MAX_DETAIL_LIMIT = 500;
+const DOCKER_LOG_READ_BYTES = 8 * 1024 * 1024;
+const ACQUISITION_CACHE_MS = 60_000;
+const execFileAsync = promisify(execFile);
+let acquisitionCache = { expiresAt: 0, sources: [] };
 
 export async function readIpInvestigation(ip, options = {}) {
   if (!isIpAddress(ip)) {
@@ -21,7 +27,7 @@ export async function readIpInvestigation(ip, options = {}) {
   const deadline = Date.now() + Math.max(1000, config.investigationTimeoutMs);
   const maxLines = clampNumber(options.maxLines, config.investigationMaxLines, 1, MAX_SAMPLE_LINES);
   const configuredPaths = config.investigationLogPaths;
-  const files = await expandLogFiles(configuredPaths);
+  const files = await resolveLogSources();
   const sources = [];
   const activeBanSummary = await readActiveBanSummary(ip);
   let totalHits = 0;
@@ -116,8 +122,8 @@ export async function readInvestigationLogLines(ip, options = {}) {
   const search = String(options.search || "").trim().toLowerCase();
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
   const deadline = Date.now() + Math.max(1000, config.investigationTimeoutMs);
-  const files = await expandLogFiles(config.investigationLogPaths);
-  const file = files.find((candidate) => candidate === requestedPath);
+  const files = await resolveLogSources();
+  const file = files.find((candidate) => candidate.id === requestedPath);
 
   if (!file) {
     throw new Error("Investigation log source is not configured or readable.");
@@ -131,13 +137,9 @@ export async function readInvestigationLogLines(ip, options = {}) {
   let timedOut = false;
 
   try {
-    const stream = createReadStream(file, { encoding: "utf8" });
-    const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-    for await (const line of reader) {
+    for await (const line of readLogSource(file, deadline)) {
       if (Date.now() > deadline) {
         timedOut = true;
-        stream.destroy();
         break;
       }
 
@@ -178,8 +180,8 @@ export async function readInvestigationLogLines(ip, options = {}) {
     ip,
     days,
     source: {
-      name: path.basename(file),
-      path: file
+      name: file.name,
+      path: file.id
     },
     generatedAt: new Date().toISOString(),
     offset,
@@ -200,8 +202,8 @@ export async function readInvestigationLogLines(ip, options = {}) {
 async function scanLogFile(file, ip, options) {
   const matcher = buildIpMatcher(ip);
   const source = {
-    name: path.basename(file),
-    path: file,
+    name: file.name,
+    path: file.id,
     hits: 0,
     forbidden: 0,
     sampledLines: [],
@@ -210,13 +212,9 @@ async function scanLogFile(file, ip, options) {
   };
 
   try {
-    const stream = createReadStream(file, { encoding: "utf8" });
-    const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-    for await (const line of reader) {
+    for await (const line of readLogSource(file, options.deadline)) {
       if (Date.now() > options.deadline) {
         source.timedOut = true;
-        stream.destroy();
         break;
       }
 
@@ -249,16 +247,102 @@ async function expandLogFiles(patterns) {
 
   for (const pattern of patterns) {
     if (pattern.includes("*")) {
-      files.push(...await expandSimpleGlob(pattern));
+      files.push(...(await expandSimpleGlob(pattern)).map(localLogSource));
       continue;
     }
 
     if (await isReadableFile(pattern)) {
-      files.push(pattern);
+      files.push(localLogSource(pattern));
     }
   }
 
-  return [...new Set(files)].sort((a, b) => a.localeCompare(b));
+  return [...new Map(files.map((file) => [file.id, file])).values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+async function resolveLogSources() {
+  const localSources = await expandLogFiles(config.investigationLogPaths);
+  const detectedSources = await discoverAcquisitionLogSources();
+  return [...new Map([...localSources, ...detectedSources].map((source) => [source.id, source])).values()];
+}
+
+function localLogSource(file) {
+  return { id: file, name: path.basename(file), kind: "local", file };
+}
+
+async function discoverAcquisitionLogSources() {
+  if (!config.investigationAutoDetect || !config.crowdsecContainer) {
+    return [];
+  }
+  if (acquisitionCache.expiresAt > Date.now()) {
+    return acquisitionCache.sources;
+  }
+
+  try {
+    const script = `for file in /etc/crowdsec/acquis.yaml /etc/crowdsec/acquis.d/*.yaml; do
+      [ -f "$file" ] || continue
+      awk '/^[[:space:]]*(filename|filenames):[[:space:]]*[^#[:space:]]/ { sub(/^[^:]*:[[:space:]]*/, ""); gsub(/["\\047]/, ""); sub(/[[:space:]]+#.*/, ""); print }' "$file"
+    done`;
+    const { stdout } = await execFileAsync("docker", ["exec", config.crowdsecContainer, "sh", "-c", script], {
+      timeout: 5000,
+      maxBuffer: 256 * 1024
+    });
+    const paths = stdout.split(/\r?\n/).map((value) => value.trim()).filter(isSafeAcquisitionPath);
+    const sources = [];
+    for (const acquisitionPath of [...new Set(paths)]) {
+      sources.push(...await expandDockerLogSources(acquisitionPath));
+    }
+    acquisitionCache = { expiresAt: Date.now() + ACQUISITION_CACHE_MS, sources };
+    return sources;
+  } catch {
+    acquisitionCache = { expiresAt: Date.now() + ACQUISITION_CACHE_MS, sources: [] };
+    return [];
+  }
+}
+
+async function expandDockerLogSources(acquisitionPath) {
+  const script = 'for file in $1; do [ -f "$file" ] && [ -r "$file" ] && printf "%s\\n" "$file"; done';
+  try {
+    const { stdout } = await execFileAsync("docker", ["exec", config.crowdsecContainer, "sh", "-c", script, "sh", acquisitionPath], {
+      timeout: 5000,
+      maxBuffer: 256 * 1024
+    });
+    return stdout.split(/\r?\n/).map((value) => value.trim()).filter(isSafeAcquisitionPath).map((file) => ({
+      id: `docker:${config.crowdsecContainer}:${file}`,
+      name: path.basename(file),
+      kind: "docker",
+      file
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function isSafeAcquisitionPath(value) {
+  return value.startsWith("/") && !value.includes("\0") && !value.includes("\n");
+}
+
+async function* readLogSource(source, deadline) {
+  if (source.kind === "local") {
+    const stream = createReadStream(source.file, { encoding: "utf8" });
+    const reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    try {
+      for await (const line of reader) {
+        yield line;
+      }
+    } finally {
+      stream.destroy();
+    }
+    return;
+  }
+
+  const timeout = Math.max(1000, deadline - Date.now());
+  const { stdout } = await execFileAsync("docker", ["exec", config.crowdsecContainer, "sh", "-c", 'tail -c "$2" "$1"', "sh", source.file, String(DOCKER_LOG_READ_BYTES)], {
+    timeout,
+    maxBuffer: DOCKER_LOG_READ_BYTES + 1024 * 1024
+  });
+  for (const line of stdout.split(/\r?\n/)) {
+    yield line;
+  }
 }
 
 function compareInvestigationSources(a, b) {
