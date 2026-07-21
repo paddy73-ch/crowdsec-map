@@ -278,9 +278,27 @@ async function discoverAcquisitionLogSources() {
   }
 
   try {
-    const script = `for file in /etc/crowdsec/acquis.yaml /etc/crowdsec/acquis.d/*.yaml; do
+    const script = `for file in /etc/crowdsec/acquis.yaml /etc/crowdsec/acquis.d/*.yaml /etc/crowdsec/acquis.d/*.yml; do
       [ -f "$file" ] || continue
-      awk '/^[[:space:]]*(filename|filenames):[[:space:]]*[^#[:space:]]/ { sub(/^[^:]*:[[:space:]]*/, ""); gsub(/["\\047]/, ""); sub(/[[:space:]]+#.*/, ""); print }' "$file"
+      awk '
+        function emit(value) {
+          sub(/^[[:space:]]+/, "", value); sub(/[[:space:]]+$/, "", value)
+          gsub(/^["\\047]|["\\047]$/, "", value)
+          if (substr(value, 1, 1) == "/") print value
+        }
+        /^[[:space:]]*filename:[[:space:]]*/ {
+          sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]+#.*/, ""); emit($0); list = 0; next
+        }
+        /^[[:space:]]*filenames:[[:space:]]*\\[/ {
+          sub(/^[^:]*:[[:space:]]*\\[/, ""); sub(/\\][[:space:]]*(#.*)?$/, "")
+          count = split($0, values, ","); for (index = 1; index <= count; index++) emit(values[index]); list = 0; next
+        }
+        /^[[:space:]]*filenames:[[:space:]]*$/ { list = 1; next }
+        list && /^[[:space:]]*-[[:space:]]*/ {
+          sub(/^[[:space:]]*-[[:space:]]*/, ""); sub(/[[:space:]]+#.*/, ""); emit($0); next
+        }
+        list && /^[^[:space:]]/ { list = 0 }
+      ' "$file"
     done`;
     const { stdout } = await execFileAsync("docker", ["exec", config.crowdsecContainer, "sh", "-c", script], {
       timeout: 5000,
@@ -485,7 +503,9 @@ function buildWarning(configuredPaths, files, timedOut) {
   if (configuredPaths.length === 0) {
     warnings.push("No investigation log paths configured.");
   } else if (files.length === 0) {
-    warnings.push("No readable investigation log files found. Mount host logs read-only and set INVESTIGATION_LOG_PATHS.");
+    warnings.push(config.investigationAutoDetect && config.crowdsecContainer
+      ? "No readable acquisition logs found in the CrowdSec container. Check CROWDSEC_CONTAINER and Docker Socket, or mount extra host logs and set INVESTIGATION_LOG_PATHS."
+      : "No readable investigation log files found. Mount host logs read-only and set INVESTIGATION_LOG_PATHS.");
   }
   if (timedOut) {
     warnings.push("Investigation stopped early because the scan timeout was reached.");
