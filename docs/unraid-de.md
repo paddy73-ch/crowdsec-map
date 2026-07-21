@@ -15,6 +15,17 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 3. Prüfe die Umgebungsvariablen.
 4. Starte den Container.
 
+## Vorlage automatisch installieren oder aktualisieren
+
+Führe dies im Unraid-Terminal aus, um die aktuelle `dev`-Vorlage in das Verzeichnis der Benutzer-Vorlagen herunterzuladen. Die bisherige Vorlage wird als `crowdsec-map.xml.bak` gesichert.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/paddy73-ch/crowdsec-map/dev/packaging/unraid/install-template.sh -o /tmp/crowdsec-map-template.sh
+bash /tmp/crowdsec-map-template.sh dev
+```
+
+Für die stabile Vorlage `main` statt `dev` verwenden. Das Aktualisieren der Vorlage ändert keinen bereits erstellten Container; zum Laden eines neuen Docker-Images in Unraid **Force Update** verwenden.
+
 ## Wichtige Einstellungen
 
 - `WebUI`: `http://[IP]:[PORT:8088]`

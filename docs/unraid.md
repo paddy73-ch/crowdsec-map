@@ -15,6 +15,17 @@ ghcr.io/paddy73-ch/crowdsec-map:latest
 3. Review the environment variables.
 4. Start the container.
 
+## Install or update the template automatically
+
+Run this from the Unraid terminal to download the current `dev` template into the user templates directory. The existing template is saved as `crowdsec-map.xml.bak`.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/paddy73-ch/crowdsec-map/dev/packaging/unraid/install-template.sh -o /tmp/crowdsec-map-template.sh
+bash /tmp/crowdsec-map-template.sh dev
+```
+
+Use `main` instead of `dev` for the stable template. Updating the template does not update an already-created container; use **Force Update** in Unraid to pull a new Docker image.
+
 ## Important settings
 
 - `WebUI`: `http://[IP]:[PORT:8088]`
