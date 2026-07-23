@@ -10,6 +10,7 @@ import { autoConfigureLapiCredentials, getLapiCredentialsStatus } from "./lapiCr
 import { groupCounts } from "./normalize.js";
 import { readPublicTargetIp } from "./publicIp.js";
 import { readActiveBans, readCrowdSecData, readCscliIpDetails, readDemoDecisionOverview, readLapiDecisionOverview } from "./sources.js";
+import { readImageUpdateStatus } from "./updateStatus.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -203,6 +204,14 @@ app.get("/api/investigation/ip/:ip/log-lines", async (request, response) => {
 app.get("/api/investigation/sources", async (_request, response) => {
   try {
     response.json(await readInvestigationLogSources());
+  } catch (error) {
+    response.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/system/update-status", async (_request, response) => {
+  try {
+    response.json(await readImageUpdateStatus());
   } catch (error) {
     response.status(500).json({ error: error.message });
   }

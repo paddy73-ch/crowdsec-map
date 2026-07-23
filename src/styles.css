@@ -2079,6 +2079,26 @@ p {
   color: #c8ddd9;
 }
 
+.updateStatus {
+  display: grid;
+  gap: 7px;
+}
+
+.updateStatus code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c8ddd9;
+}
+
+.updateStatus .updateState {
+  font-weight: 700;
+  color: #8da39f;
+}
+
+.updateStatus .updateState.current { color: #68ddc6; }
+.updateStatus .updateState.update_available { color: #f0bd66; }
+
 .hiddenRecentRow time,
 .hiddenRecentRow span,
 .hiddenRecentRow em {

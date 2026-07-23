@@ -731,24 +731,27 @@ function HiddenMenuModal({ onClose }) {
   const [summary, setSummary] = useState(null);
   const [lapiStatus, setLapiStatus] = useState(null);
   const [investigationSources, setInvestigationSources] = useState(null);
+  const [updateStatus, setUpdateStatus] = useState(null);
   const [pathCopied, setPathCopied] = useState(false);
   const [error, setError] = useState("");
 
   const loadSummary = useCallback(async () => {
     setError("");
     try {
-      const [summaryResponse, lapiResponse, investigationResponse] = await Promise.all([
+      const [summaryResponse, lapiResponse, investigationResponse, updateResponse] = await Promise.all([
         fetch("/api/access-log/summary?days=7"),
         fetch("/api/lapi/credentials/status"),
-        fetch("/api/investigation/sources")
+        fetch("/api/investigation/sources"),
+        fetch("/api/system/update-status")
       ]);
-      if (!summaryResponse.ok || !lapiResponse.ok || !investigationResponse.ok) {
-        throw new Error(`HTTP ${!summaryResponse.ok ? summaryResponse.status : !lapiResponse.ok ? lapiResponse.status : investigationResponse.status}`);
+      if (!summaryResponse.ok || !lapiResponse.ok || !investigationResponse.ok || !updateResponse.ok) {
+        throw new Error(`HTTP ${!summaryResponse.ok ? summaryResponse.status : !lapiResponse.ok ? lapiResponse.status : !investigationResponse.ok ? investigationResponse.status : updateResponse.status}`);
       }
-      const [summaryPayload, lapiPayload, investigationPayload] = await Promise.all([summaryResponse.json(), lapiResponse.json(), investigationResponse.json()]);
+      const [summaryPayload, lapiPayload, investigationPayload, updatePayload] = await Promise.all([summaryResponse.json(), lapiResponse.json(), investigationResponse.json(), updateResponse.json()]);
       setSummary(summaryPayload);
       setLapiStatus(lapiPayload);
       setInvestigationSources(investigationPayload);
+      setUpdateStatus(updatePayload);
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -833,6 +836,13 @@ function HiddenMenuModal({ onClose }) {
                 </div>
               ))}
               {investigationSources.sources.length === 0 && <p>No readable log sources. Configured: {investigationSources.configuredPaths.join(", ") || "none"}</p>}
+            </div>}
+            {updateStatus && <div className="hiddenRecent updateStatus">
+              <h4>Container image · GitHub dev</h4>
+              <p className={`updateState ${updateStatus.state}`}>{updateStatus.state === "current" ? "Current" : updateStatus.state === "update_available" ? "Update available" : "Check unavailable"}</p>
+              <p>{updateStatus.message}</p>
+              {updateStatus.image && <code title={updateStatus.image}>{updateStatus.image}</code>}
+              {updateStatus.runningRevision && <p>Running: <code>{updateStatus.runningRevision.slice(0, 12)}</code> · Dev: {updateStatus.devUrl ? <a href={updateStatus.devUrl} target="_blank" rel="noreferrer"><code>{updateStatus.devRevision.slice(0, 12)}</code></a> : <code>{updateStatus.devRevision.slice(0, 12)}</code>}</p>}
             </div>}
           </div>
         )}
