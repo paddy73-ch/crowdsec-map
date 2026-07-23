@@ -2056,6 +2056,29 @@ p {
   gap: 5px;
 }
 
+.investigationSources {
+  display: grid;
+  gap: 8px;
+}
+
+.investigationSourcePath {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 12px;
+}
+
+.investigationSourcePath span {
+  color: #8da39f;
+}
+
+.investigationSourcePath code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c8ddd9;
+}
+
 .hiddenRecentRow time,
 .hiddenRecentRow span,
 .hiddenRecentRow em {

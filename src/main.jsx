@@ -730,22 +730,25 @@ function Toolbar({ view, setView, theme, setTheme, source, setSource, refreshSec
 function HiddenMenuModal({ onClose }) {
   const [summary, setSummary] = useState(null);
   const [lapiStatus, setLapiStatus] = useState(null);
+  const [investigationSources, setInvestigationSources] = useState(null);
   const [pathCopied, setPathCopied] = useState(false);
   const [error, setError] = useState("");
 
   const loadSummary = useCallback(async () => {
     setError("");
     try {
-      const [summaryResponse, lapiResponse] = await Promise.all([
+      const [summaryResponse, lapiResponse, investigationResponse] = await Promise.all([
         fetch("/api/access-log/summary?days=7"),
-        fetch("/api/lapi/credentials/status")
+        fetch("/api/lapi/credentials/status"),
+        fetch("/api/investigation/sources")
       ]);
-      if (!summaryResponse.ok || !lapiResponse.ok) {
-        throw new Error(`HTTP ${!summaryResponse.ok ? summaryResponse.status : lapiResponse.status}`);
+      if (!summaryResponse.ok || !lapiResponse.ok || !investigationResponse.ok) {
+        throw new Error(`HTTP ${!summaryResponse.ok ? summaryResponse.status : !lapiResponse.ok ? lapiResponse.status : investigationResponse.status}`);
       }
-      const [summaryPayload, lapiPayload] = await Promise.all([summaryResponse.json(), lapiResponse.json()]);
+      const [summaryPayload, lapiPayload, investigationPayload] = await Promise.all([summaryResponse.json(), lapiResponse.json(), investigationResponse.json()]);
       setSummary(summaryPayload);
       setLapiStatus(lapiPayload);
+      setInvestigationSources(investigationPayload);
     } catch (loadError) {
       setError(loadError.message);
     }
@@ -819,6 +822,17 @@ function HiddenMenuModal({ onClose }) {
                 <button type="button" onClick={copyCredentialsPath} title="Copy container path"><Copy size={14} /> {pathCopied ? "Copied" : "Copy path"}</button>
               </div>
               {lapiStatus.autoSetupEnabled && <p>Automatic setup runs on container start.</p>}
+            </div>}
+            {investigationSources && <div className="hiddenRecent investigationSources">
+              <h4>Investigation log paths</h4>
+              <p>{investigationSources.sources.length} readable source{investigationSources.sources.length === 1 ? "" : "s"} · Auto detect {investigationSources.autoDetectEnabled ? "enabled" : "disabled"}</p>
+              {investigationSources.sources.map((source) => (
+                <div className="investigationSourcePath" key={`${source.location}-${source.path}`}>
+                  <span>{source.location}</span>
+                  <code title={source.path}>{source.path}</code>
+                </div>
+              ))}
+              {investigationSources.sources.length === 0 && <p>No readable log sources. Configured: {investigationSources.configuredPaths.join(", ") || "none"}</p>}
             </div>}
           </div>
         )}

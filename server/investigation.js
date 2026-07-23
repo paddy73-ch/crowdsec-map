@@ -17,6 +17,20 @@ const ACQUISITION_CACHE_MS = 60_000;
 const execFileAsync = promisify(execFile);
 let acquisitionCache = { expiresAt: 0, sources: [] };
 
+export async function readInvestigationLogSources() {
+  const sources = await resolveLogSources();
+  return {
+    configuredPaths: config.investigationLogPaths,
+    autoDetectEnabled: config.investigationAutoDetect,
+    crowdsecContainer: config.crowdsecContainer,
+    sources: sources.map((source) => ({
+      name: source.name,
+      path: source.file,
+      location: source.kind === "docker" ? "CrowdSec container" : "CrowdSec Map container"
+    }))
+  };
+}
+
 export async function readIpInvestigation(ip, options = {}) {
   if (!isIpAddress(ip)) {
     throw new Error("Invalid IP address");
